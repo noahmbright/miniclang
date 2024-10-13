@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mini_string.h"
+#include <stdatomic.h>
 
 enum class TokenType {
   // compiler internals
@@ -91,6 +92,7 @@ enum class TokenType {
   Union,
   Enum,
   //  typedef-name's also fall into type specifier category
+  TypeDefName,
 
   // storage-class-specifier:
   Typedef,
@@ -115,14 +117,6 @@ enum class TokenType {
   AlignAs // _Alignas
 };
 
-struct Lexer {
-  const char *current_filepath;
-  const char *beginning_of_current_token;
-  const char *current_location;
-  unsigned line;
-  unsigned column;
-};
-
 struct Token {
   TokenType type;
   String string;
@@ -130,11 +124,21 @@ struct Token {
   unsigned column;
 };
 
+struct Lexer {
+  const char *current_filepath;
+  const char *beginning_of_current_token;
+  const char *current_location;
+  unsigned line;
+  unsigned column;
+
+  Token current_token;
+};
+
 Lexer new_lexer(const char *);
 void tokenize_char_ptr(const char *);
 Token make_token(Lexer *, TokenType);
-Token next_token(Lexer *);
+Token *get_next_token(Lexer *);
 Token error_token(Lexer *, const char *);
-void lexer_print_error_message(Lexer *lexer, const char *);
-bool expect_token_type(Token token, TokenType type);
-Token expect_and_skip(Lexer *lexer, TokenType type, const char *);
+void lexer_print_error_message(Lexer *, const char *);
+bool expect_token_type(Token *, TokenType);
+Token *expect_and_skip(Lexer *, TokenType, const char *);

@@ -13,11 +13,18 @@ Lexer new_lexer(const char *text) {
   return lexer;
 }
 
+static Token lex_next_token(Lexer *lexer) {}
+
+Token *get_next_token(Lexer *lexer) {
+  lexer->current_token = lex_next_token(lexer);
+  return &lexer->current_token;
+}
+
 Token recover_and_return_error_token(Lexer *lexer, Token error_token) {
-  Token current_token = next_token(lexer);
-  while (current_token.type != TokenType::Semicolon &&
-         current_token.type != TokenType::Eof)
-    current_token = next_token(lexer);
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type != TokenType::Semicolon &&
+         current_token->type != TokenType::Eof)
+    current_token = get_next_token(lexer);
 
   return error_token;
 }
@@ -36,12 +43,15 @@ bool expect_token_type(Token token, TokenType type) {
   return token.type == type;
 }
 
-Token expect_and_skip(Lexer *lexer, TokenType type, const char *error_message) {
-  Token next_tok = next_token(lexer);
+Token *expect_and_skip(Lexer *lexer, TokenType type,
+                       const char *error_message) {
+
+  Token *next_tok = get_next_token(lexer);
   if (expect_token_type(next_tok, type))
     return next_tok;
 
-  return error_token(lexer, error_message);
+  lexer->current_token = error_token(lexer, error_message);
+  return &lexer->current_token;
 }
 
 Token make_token(Lexer *lexer, TokenType token_type) {
