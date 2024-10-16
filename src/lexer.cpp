@@ -425,7 +425,7 @@ Token lex_next_token(Lexer *lexer) {
                                               string_from_lexer(lexer));
   }
 
-  return {};
+  assert(false && "Lex next token UNREACHABLE");
 }
 
 Token *get_next_token(Lexer *lexer) {
