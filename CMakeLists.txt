@@ -16,9 +16,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 file(GLOB_RECURSE SOURCE_FILES 
-	${CMAKE_SOURCE_DIR}/src/*.cpp
+	${CMAKE_SOURCE_DIR}/src/lexer.cpp
+	${CMAKE_SOURCE_DIR}/src/parser.cpp
+	${CMAKE_SOURCE_DIR}/src/type.cpp
 )
 
-add_executable(miniclangpp ${SOURCE_FILES})
-target_link_libraries(miniclangpp ${llvm_libs})
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
+add_library(miniclangpp_lib ${SOURCE_FILES})
+target_link_libraries(miniclangpp_lib ${llvm_libs})
+link_libraries(miniclangpp_lib)
+
+add_executable(miniclangpp ${CMAKE_SOURCE_DIR}/src/main.cpp)
+
+add_executable(lexer_test ${CMAKE_SOURCE_DIR}/tests/lexer.cpp)

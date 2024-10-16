@@ -49,4 +49,4 @@ enum TypeSpecifierFlag {
   Enum = 1 << 30
 };
 
-void update_specified_type(Token *, Declaration *);
+void update_declaration(Token *, Declaration *);
