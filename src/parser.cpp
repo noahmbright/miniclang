@@ -4,6 +4,9 @@
 
 #include <cassert>
 
+void parse_direct_abstract_declarator(Lexer *lexer);
+AbstractType *parse_abstract_declarator(Lexer *lexer);
+
 ASTNode *new_ast_node() {
   ASTNode *new_node = (ASTNode *)malloc(sizeof(ASTNode));
   return new_node;
@@ -155,16 +158,14 @@ void parse_declaration(Lexer *lexer, Scope *scope) {
 // declarator: pointer(optional) direct-declarator
 void parse_declarator(Lexer *lexer) {
   Token *current_token = get_current_token(lexer);
-  if (current_token->type == TokenType::Asterisk)
+  if (current_token->type == TokenType::Asterisk) {
+    get_next_token(lexer);
     parse_pointer(lexer);
+  }
 
   // parse_direct_declarator();
 }
 
-// pointer: * type-qualifier-list(optional)
-//          * type-qualifier-list(optional) pointer
-
-// intermediate stop: type qualifier list
 // e.g. parse a const*
 static void parse_type_qualifier_list(Lexer *lexer) {
   Token *current_token = get_current_token(lexer);
@@ -177,11 +178,12 @@ static void parse_type_qualifier_list(Lexer *lexer) {
   }
 }
 
-// TODO: Wrangle types and figure out what to do with
-// products of this function
 // pointer is *type-qualifier-list(opt) followed by another ptr(opt)
 // e.g. parse a (int) *const *volatile x;
-// x is a volatile pointer to a const int
+// x is a volatile pointer to a const pointer to int
+//
+// pointer: * type-qualifier-list(optional)
+//          * type-qualifier-list(optional) pointer
 void parse_pointer(Lexer *lexer) {
 
   Token *token_after_asterisk = expect_and_get_next_token(
@@ -196,20 +198,24 @@ void parse_pointer(Lexer *lexer) {
     parse_type_qualifier_list(lexer);
 }
 
-// abstract-declarator
-//      pointer
-//      pointer(opt) direct-abstract-declarator
-
-// direct-abstract-declarator (DAD)
-//      (abstract-dec)
-//      DAD(opt) [type-qual-list(opt) assign-expr(opt)]
-
-// parameter-type-list
+// parameter-type-list:
 //      parameter-list
 //      parameter-list, ...
+//
 // this is an extra that fixes variadic function parameters
-// to come at the end
+// to come at the end in function signature declarations
 // so f(int x, ...) is allowed by (int x, ..., int y) isn't
+void parse_parameter_type_list(Lexer *lexer, FunctionType *function) {
+
+  assert(get_current_token(lexer)->type == TokenType::LParen);
+
+  switch (get_next_token(lexer)->type) {
+  case TokenType::Ellipses:
+    expect_and_get_next_token(
+        lexer, TokenType::RParen,
+        "Expected RParen after ellipsis in variadic argument");
+  }
+}
 
 // parameter-list
 //      parameter-declaration
@@ -226,44 +232,52 @@ void parse_pointer(Lexer *lexer) {
 //
 // direct-declarator:
 //      identifier
-//          e.g. x;
-//
 //      (declarator)
-//          e.g. (x)
-//
 //      direct-declarator [type-qual-list(opt) assign-expr(opt)]
 //          e.g. x[], x[const 10]
 //
 //      direct-declarator [static type-qualifier-list(opt) assignment-expr]
-//          e.g. x[static const 10]
-//
 //      direct-declarator [type-qualifier-list static assignment-expression]
-//          e.g. x[const static 10]
-//
 //      direct-declarator [type-qualifier-list(opt) * ]
-//          e.g. x[const *]
-//            used in function declarations for arrays of unknown size
+//          these three only allowed in function definitions, the qualifiers
+//          have to come first in an array of arrays
+//              e.g. x[const 10][10];
+//              the second 10 is needed for the array to have a complete type
 //
 //      direct-declarator (parameter-type-list)
-//          int x(int y, ...)
-//
-//      direct-declarator ( identifier-list(opt))
-//          int x(), int x(int y)
-void parse_direct_declarator(Lexer *lexer) {
+//          e.g. int x(int y, ...), for function declarations
+//      direct-declarator (identifier-list(opt))
+//          e.g. int x(), int x(int y), for function calls
+Object parse_direct_declarator(Lexer *lexer) {
   Token *current_token = get_current_token(lexer);
 
+  // parenthesis, parse another declarator
   if (current_token->type == TokenType::LParen) {
+    get_next_token(lexer);
     parse_declarator(lexer);
     current_token = expect_and_get_next_token(
         lexer, TokenType::RParen, "parse_direct_declarator expected RParen");
   }
 
+  // start of parsing a new declarator with name identifier's-name
   if (current_token->type == TokenType::Identifier) {
+
+    Object object;
+    object.name = current_token->string;
+    assert(object.name != "");
 
     switch (get_next_token(lexer)->type) {
     case TokenType::Semicolon:
-      return;
-    // case TokenType::LBracket:
+      return object;
+    case TokenType::LBracket:
+
+    case TokenType::LParen:
+      switch (get_next_token(lexer)->type) {
+      case TokenType::Identifier:
+      case TokenType::RParen:
+        return object;
+      default:
+      }
     default:
       error_token(lexer, "FIXME: default case in parse_direct_declarator");
     }
@@ -301,20 +315,40 @@ Declaration parse_specifier_qualifier_list(Lexer *lexer, Scope *scope) {
 // e.g. int * x[] declares x with type int * []
 // and you can declare a function with signature f(int*);
 
+// direct-abstract-declarator:
+//      ( abstract-declarator )
+//
+//      direct-abstract-declarator(opt) [ type-qualifier-list(opt)
+//              assignment-expression(opt) ]
+//
+//      direct-abstract-declarator(opt) [ static type-qualifier-list(opt)
+//           assignment-expression ]
+//
+//      direct-abstract-declarator(opt) [ type-qualifier-list static
+//           assignment-expression ]
+//
+//      direct-abstract-declarator(opt) [*]
+//
+//      direct-abstract-declarator(opt) ( parameter-type-list(opt) )
+void parse_direct_abstract_declarator(Lexer *lexer) {
+  // parenthesis
+  if (get_current_token(lexer)->type == TokenType::LParen) {
+    get_next_token(lexer);
+    parse_abstract_declarator(lexer);
+    expect_token_type(get_current_token(lexer), TokenType::RParen);
+  }
+}
+
 // abstract-declarator:
 //      pointer
 //      pointer(optional) direct-abstract-declarator
+AbstractType *parse_abstract_declarator(Lexer *lexer) {
+  AbstractType *abstract_type = new_abstract_type();
+  if (get_current_token(lexer)->type == TokenType::Asterisk)
+    parse_pointer(lexer);
 
-// direct-abstract-declarator:
-//      ( abstract-declarator )
-//      direct-abstract-declaratoropt [ type-qualifier-list(opt)
-//              assignment-expression(opt) ]
-//      direct-abstract-declaratoropt [ static type-qualifier-list(opt)
-//           assignment-expression ]
-//      direct-abstract-declaratoropt [ type-qualifier-list static
-//           assignment-expression ]
-//      direct-abstract-declarator(opt) [*]
-//      direct-abstract-declarator(opt) ( parameter-type-list(opt) )
+  return abstract_type;
+}
 
 void parse_file(const char *file) {
   Lexer lexer = new_lexer(file);

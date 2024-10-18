@@ -192,6 +192,8 @@ static void skip_whitespace_and_comments(Lexer *lexer) {
   }
 }
 
+// this works if current_location is the position after the last char of the
+// token
 static unsigned token_length(Lexer *lexer) {
   return lexer->current_location - lexer->beginning_of_current_token;
 }
@@ -219,29 +221,108 @@ static Token lex_string_literal(Lexer *lexer) {
   return token;
 }
 
-Token lex_number(Lexer *lexer) {
-  assert(current_char(lexer));
-  while (is_digit(current_char(lexer)))
+// valid suffixes are l, L, u, U, ll, LL,
+//                    ull, uLL, llu, LLu,
+//                    Ull, ULL, llU, LLU
+static void consume_integer_suffix(Lexer *lexer) {
+  char c = current_char(lexer);
+  std::string suffix;
+  while (is_digit(c) || is_non_digit(c)) {
+    suffix.push_back(c);
     advance(lexer);
+    c = current_char(lexer);
+  }
+
+  if (suffix != "l" || suffix != "L" || suffix != "u" || suffix != "U" ||
+      suffix != "ll" || suffix != "LL" || suffix != "ull" || suffix != "llu" ||
+      suffix != "LLu" || suffix != "Ull" || suffix != "ULL" ||
+      suffix != "llU" || suffix != "LLU")
+    error_token(lexer, "Invalid integer suffix");
+}
+
+static bool is_hex_digit(char c) {
+  bool is_upper_hex = (c >= 'A' && c <= 'F');
+  bool is_lower_hex = (c >= 'a' && c <= 'f');
+  return is_digit(c) || is_lower_hex || is_lower_hex;
+}
+
+static bool is_octal_digit(char c) { return c <= '7' && c >= '0'; }
+
+Token consume_hexadecimal_number(Lexer *lexer) {
+  while (is_hex_digit(current_char(lexer)))
+    advance(lexer);
+}
+
+Token consume_binary_number(Lexer *lexer) {}
+Token consume_floating_point_number(Lexer *lexer) {}
+Token consume_octal_number(Lexer *lexer) {}
+
+// need to deal with signed/unsigned hex, decimal, octal, binary integers
+// need to deal with floats/double
+Token lex_number(Lexer *lexer) {
+  bool seen_decimal_point = false;
+  char c = current_char(lexer);
+
+  if (c == '0') {
+    advance(lexer);
+    c = current_char(lexer);
+    if (c == 'x')
+      return consume_hexadecimal_number(lexer);
+    if (c == 'b')
+      return consume_binary_number(lexer);
+    if (c == '.')
+      return consume_floating_point_number(lexer);
+    if (is_digit(c))
+      return consume_octal_number(lexer);
+  }
+
+  while (is_digit(c) || c == '.' || is_non_digit(c)) {
+
+    if (c == '.') {
+      if (seen_decimal_point)
+        return error_token(lexer, "Found second decimal point in number");
+
+      seen_decimal_point = true;
+    }
+
+    if (is_non_digit(c)) {
+      switch (c) {
+      case 'u':
+      case 'U':
+      }
+    }
+
+    advance(lexer);
+
+    c = current_char(lexer);
+  }
 
   return lexer_make_token_without_advancing(lexer, TokenType::Number,
                                             string_from_lexer(lexer));
 }
 
-Token lex_ellipses(Lexer *lexer) {
+static char peek_char_in_token(Lexer *lexer, unsigned idx) {
+  int length = token_length(lexer);
+  if (idx < length)
+    return lexer->beginning_of_current_token[idx];
+  return '\0';
+}
+
+static Token lex_ellipses(Lexer *lexer) {
   assert(current_char(lexer) == '.');
   advance(lexer);
   assert(current_char(lexer) == '.');
   advance(lexer);
   assert(current_char(lexer) == '.');
   advance(lexer);
-  return lexer_make_token_and_advance(lexer, TokenType::Ellipses);
+  return lexer_make_token_and_advance(lexer, TokenType::Ellipsis);
 }
 
 static Token token_from_keyword_or_identifier(Lexer *lexer,
                                               TokenType token_type,
                                               std::string keyword) {
   std::string current_lexer_string = string_from_lexer(lexer);
+
   if (current_lexer_string == keyword)
     return lexer_make_token_without_advancing(lexer, token_type);
 
@@ -283,6 +364,13 @@ Token lex_next_token(Lexer *lexer) {
   case '?':
     return lexer_make_token_and_advance(lexer, TokenType::QuestionMark);
 
+  case '^':
+    if (peek_next_char(lexer) == '=') {
+      advance(lexer);
+      return lexer_make_token_and_advance(lexer, TokenType::XorEquals);
+    }
+    return lexer_make_token_and_advance(lexer, TokenType::Caret);
+
   case '.':
     if (peek_next_char(lexer) == '.')
       return lex_ellipses(lexer);
@@ -307,6 +395,9 @@ Token lex_next_token(Lexer *lexer) {
       advance(lexer);
       return lexer_make_token_and_advance(lexer, TokenType::PlusPlus);
     }
+    // positive float
+    if (is_digit(peek_next_char(lexer)) || peek_next_char(lexer) == '.')
+      return lex_number(lexer);
 
     // +
     return lexer_make_token_and_advance(lexer, TokenType::Plus);
@@ -323,6 +414,10 @@ Token lex_next_token(Lexer *lexer) {
       advance(lexer);
       return lexer_make_token_and_advance(lexer, TokenType::MinusMinus);
     }
+
+    // negative float
+    if (is_digit(peek_next_char(lexer)) || peek_next_char(lexer) == '.')
+      return lex_number(lexer);
 
     // -
     return lexer_make_token_and_advance(lexer, TokenType::Minus);
@@ -413,13 +508,169 @@ Token lex_next_token(Lexer *lexer) {
   while (is_alphanumeric(current_char(lexer)))
     advance(lexer);
 
-  switch (lexer->beginning_of_current_token[0]) {
-  case 'i':
-    switch (lexer->beginning_of_current_token[1]) {
-    case 'n':
-      return token_from_keyword_or_identifier(lexer, TokenType::Int, "int");
-    case 'f':
+  switch (peek_char_in_token(lexer, 0)) {
+  case '_':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'A':
+      switch (peek_char_in_token(lexer, 2)) {
+      case 't':
+        return token_from_keyword_or_identifier(lexer, TokenType::Atomic,
+                                                "_Atomic");
+      case 'l':
+        return token_from_keyword_or_identifier(lexer, TokenType::AlignAs,
+                                                "_Alignas");
+      }
+    case 'N':
+      return token_from_keyword_or_identifier(lexer, TokenType::NoReturn,
+                                              "_Noreturn");
+    case 'T':
+      return token_from_keyword_or_identifier(lexer, TokenType::ThreadLocal,
+                                              "_Thread_local");
     }
+
+  case 'a':
+    return token_from_keyword_or_identifier(lexer, TokenType::Auto, "auto");
+  case 'b':
+    return token_from_keyword_or_identifier(lexer, TokenType::Break, "break");
+
+  case 'c':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'a':
+      return token_from_keyword_or_identifier(lexer, TokenType::Case, "case");
+    case 'h':
+      return token_from_keyword_or_identifier(lexer, TokenType::Char, "char");
+
+    case 'o':
+      // const and continue both have [2] = n
+      switch (peek_char_in_token(lexer, 3)) {
+      case 's':
+        return token_from_keyword_or_identifier(lexer, TokenType::Const,
+                                                "const");
+      case 't':
+        return token_from_keyword_or_identifier(lexer, TokenType::Continue,
+                                                "continue");
+      }
+    }
+
+  case 'd':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'e':
+      return token_from_keyword_or_identifier(lexer, TokenType::Default,
+                                              "default");
+    case 'o':
+      if (peek_char_in_token(lexer, 2) == 'u')
+        return token_from_keyword_or_identifier(lexer, TokenType::Double,
+                                                "double");
+      return token_from_keyword_or_identifier(lexer, TokenType::Do, "do");
+    }
+
+  case 'e':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'l':
+      return token_from_keyword_or_identifier(lexer, TokenType::Else, "else");
+    case 'n':
+      return token_from_keyword_or_identifier(lexer, TokenType::Enum, "enum");
+    case 'x':
+      return token_from_keyword_or_identifier(lexer, TokenType::Extern,
+                                              "extern");
+    }
+
+  case 'f':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'l':
+      return token_from_keyword_or_identifier(lexer, TokenType::Float, "float");
+    case 'o':
+      return token_from_keyword_or_identifier(lexer, TokenType::For, "for");
+    }
+
+  case 'g':
+    return token_from_keyword_or_identifier(lexer, TokenType::GoTo, "goto");
+
+  case 'i':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'n':
+      switch (peek_char_in_token(lexer, 2)) {
+      case 't':
+        return token_from_keyword_or_identifier(lexer, TokenType::Int, "int");
+      case 'l':
+        return token_from_keyword_or_identifier(lexer, TokenType::Inline,
+                                                "inline");
+      }
+    case 'f':
+      return token_from_keyword_or_identifier(lexer, TokenType::If, "if");
+    }
+
+  case 'l':
+    return token_from_keyword_or_identifier(lexer, TokenType::Long, "long");
+
+    // register, return, restrict all start with "re"
+  case 'r':
+    switch (peek_char_in_token(lexer, 2)) {
+    case 'g':
+      return token_from_keyword_or_identifier(lexer, TokenType::Register,
+                                              "register");
+    case 't':
+      return token_from_keyword_or_identifier(lexer, TokenType::Register,
+                                              "return");
+    case 's':
+      return token_from_keyword_or_identifier(lexer, TokenType::Restrict,
+                                              "restrict");
+    }
+
+  case 's':
+    switch (peek_char_in_token(lexer, 1)) {
+    case 'h':
+      return token_from_keyword_or_identifier(lexer, TokenType::Short, "short");
+    case 'i':
+      switch (peek_char_in_token(lexer, 2)) {
+      case 'g':
+        return token_from_keyword_or_identifier(lexer, TokenType::Signed,
+                                                "signed");
+      case 'z':
+        return token_from_keyword_or_identifier(lexer, TokenType::SizeOf,
+                                                "sizeof");
+      }
+    case 't':
+      switch (peek_char_in_token(lexer, 2)) {
+      case 'r':
+        return token_from_keyword_or_identifier(lexer, TokenType::Struct,
+                                                "struct");
+      case 'a':
+        return token_from_keyword_or_identifier(lexer, TokenType::Static,
+                                                "static");
+      }
+    case 'w':
+      return token_from_keyword_or_identifier(lexer, TokenType::Switch,
+                                              "switch");
+    }
+
+  case 't':
+    return token_from_keyword_or_identifier(lexer, TokenType::Typedef,
+                                            "typedef");
+
+    // union, unsigned
+  case 'u':
+    switch (peek_char_in_token(lexer, 2)) {
+    case 'i':
+      return token_from_keyword_or_identifier(lexer, TokenType::Union, "union");
+    case 's':
+      return token_from_keyword_or_identifier(lexer, TokenType::Unsigned,
+                                              "unsigned");
+    }
+
+    // void, volatile
+  case 'v':
+    switch (peek_char_in_token(lexer, 2)) {
+    case 'i':
+      return token_from_keyword_or_identifier(lexer, TokenType::Void, "void");
+    case 'l':
+      return token_from_keyword_or_identifier(lexer, TokenType::Volatile,
+                                              "volatile");
+    }
+
+  case 'w':
+    return token_from_keyword_or_identifier(lexer, TokenType::While, "while");
+
   default:
     return lexer_make_token_without_advancing(lexer, TokenType::Identifier,
                                               string_from_lexer(lexer));

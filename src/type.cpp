@@ -1,13 +1,19 @@
 #include "type.h"
 #include "lexer.h"
 #include <cstdio>
+#include <cstdlib>
 
-static void set_declaration_flag(TypeSpecifierFlag flag,
+static void set_declaration_flag(TypeModifierFlag flag,
                                  Declaration *declaration) {
   declaration->flags |= flag;
 }
 
-static void handle_storage_class_specifier_flag(TypeSpecifierFlag flag,
+AbstractType *new_abstract_type() {
+  AbstractType *abstract_type = (AbstractType *)malloc(sizeof(AbstractType));
+  return abstract_type;
+}
+
+static void handle_storage_class_specifier_flag(TypeModifierFlag flag,
                                                 Declaration *declaration) {
   // At most, one storage-class specifier may be given in the declaration
   // specifiers in a  declaration, except that _Thread_local may appear with
@@ -15,7 +21,7 @@ static void handle_storage_class_specifier_flag(TypeSpecifierFlag flag,
 
   // FIXME: fix block scope type issue
 
-  using enum TypeSpecifierFlag;
+  using enum TypeModifierFlag;
 
   // any of the storage classes are already specified
   if (declaration->flags &&
@@ -44,7 +50,7 @@ static void handle_storage_class_specifier_flag(TypeSpecifierFlag flag,
   set_declaration_flag(flag, declaration);
 }
 
-static void check_flag_set_and_update_if_not(TypeSpecifierFlag flag,
+static void check_flag_set_and_update_if_not(TypeModifierFlag flag,
                                              Declaration *declaration) {
   if (declaration->flags & flag) {
     fprintf(stderr, "repeating type specifier");
@@ -62,7 +68,7 @@ static void handle_align_as(Declaration *declaration) {
   // FIXME: Implement handle align as caveats
   //        probably want to do this in the parser
 
-  set_declaration_flag(TypeSpecifierFlag::Alignas, declaration);
+  set_declaration_flag(TypeModifierFlag::Alignas, declaration);
 }
 
 void update_declaration_specifiers(Token *token, Declaration *declaration) {
@@ -71,73 +77,72 @@ void update_declaration_specifiers(Token *token, Declaration *declaration) {
   switch (token->type) {
 
   case Void:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Void, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Void, declaration);
     return;
   case Char:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Char, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Char, declaration);
     return;
   case Signed:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Signed, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Signed, declaration);
     return;
   case Unsigned:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Unsigned, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Unsigned, declaration);
     return;
   case Short:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Short, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Short, declaration);
     return;
   case Int:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Int, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Int, declaration);
     return;
   case Float:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Float, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Float, declaration);
     return;
   case Double:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Double, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Double, declaration);
     return;
   case Bool:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Bool, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Bool, declaration);
     return;
   case Complex:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Complex, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Complex, declaration);
     return;
   case TypeDefName:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::TypeDefName,
+    check_flag_set_and_update_if_not(TypeModifierFlag::TypeDefName,
                                      declaration);
     return;
   case Struct:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Struct, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Struct, declaration);
     return;
   case Enum:
-    check_flag_set_and_update_if_not(TypeSpecifierFlag::Enum, declaration);
+    check_flag_set_and_update_if_not(TypeModifierFlag::Enum, declaration);
     return;
 
   case Long:
-    if (declaration->flags & TypeSpecifierFlag::LongTest)
+    if (declaration->flags & TypeModifierFlag::LongTest)
       fprintf(stderr, "Specifying too mang longs in type specification");
     else
-      declaration->flags += TypeSpecifierFlag::Long;
+      declaration->flags += TypeModifierFlag::Long;
     return;
 
     // storage class specifiers
   case Typedef:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::TypeDef,
-                                        declaration);
+    handle_storage_class_specifier_flag(TypeModifierFlag::TypeDef, declaration);
     return;
   case Extern:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::Extern, declaration);
+    handle_storage_class_specifier_flag(TypeModifierFlag::Extern, declaration);
     return;
   case Static:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::Static, declaration);
+    handle_storage_class_specifier_flag(TypeModifierFlag::Static, declaration);
     return;
   case ThreadLocal:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::ThreadLocal,
+    handle_storage_class_specifier_flag(TypeModifierFlag::ThreadLocal,
                                         declaration);
     return;
   case Auto:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::Auto, declaration);
+    handle_storage_class_specifier_flag(TypeModifierFlag::Auto, declaration);
     return;
   case Register:
-    handle_storage_class_specifier_flag(TypeSpecifierFlag::Register,
+    handle_storage_class_specifier_flag(TypeModifierFlag::Register,
                                         declaration);
     return;
 
@@ -146,26 +151,26 @@ void update_declaration_specifiers(Token *token, Declaration *declaration) {
     // the behavior is the same as if it appeared only once.
     // FIXME: Send a warning for duplicate flag
   case Const:
-    set_declaration_flag(TypeSpecifierFlag::Const, declaration);
+    set_declaration_flag(TypeModifierFlag::Const, declaration);
     return;
   case Restrict:
-    set_declaration_flag(TypeSpecifierFlag::Restrict, declaration);
+    set_declaration_flag(TypeModifierFlag::Restrict, declaration);
     return;
   case Volatile:
-    set_declaration_flag(TypeSpecifierFlag::Volatile, declaration);
+    set_declaration_flag(TypeModifierFlag::Volatile, declaration);
     return;
   case Atomic:
-    set_declaration_flag(TypeSpecifierFlag::Atomic, declaration);
+    set_declaration_flag(TypeModifierFlag::Atomic, declaration);
     return;
 
     // function specifiers
     // A function specifier may appear more than once; the behavior is the same
     // as if it appeared only once.
   case Inline:
-    set_declaration_flag(TypeSpecifierFlag::Inline, declaration);
+    set_declaration_flag(TypeModifierFlag::Inline, declaration);
     return;
   case NoReturn:
-    set_declaration_flag(TypeSpecifierFlag::NoReturn, declaration);
+    set_declaration_flag(TypeModifierFlag::NoReturn, declaration);
     return;
 
   case AlignAs:
@@ -189,7 +194,7 @@ Type type_from_declaration(Declaration *declaration) {
   // 13 in hex is 0xd
   int declaration_type_as_int = declaration->flags & 0xd;
 
-  using enum TypeSpecifierFlag;
+  using enum TypeModifierFlag;
   switch (declaration_type_as_int) {
   case 0:
     // typedef name? error?

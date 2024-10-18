@@ -34,7 +34,7 @@ enum class TokenType {
   LessThanOrEqualTo = 25,
   GreaterThanOrEqualTo = 26,
   DoubleEquals = 27,
-  Ellipses = 28,
+  Ellipsis = 28,
 
   Caret = 29,
   Ampersand = 30,
@@ -66,57 +66,62 @@ enum class TokenType {
 
   // control
   For = 52,
-  While = 53,
-  If = 54,
-  Else = 55,
-  Switch = 56,
-  Case = 57,
-  Continue = 58,
-  Break = 59,
-  GoTo = 60,
-  Return = 61,
+  Do = 53,
+  While = 54,
+  If = 55,
+  Else = 56,
+  Switch = 57,
+  Default = 58,
+  Case = 59,
+  Continue = 60,
+  Break = 61,
+  GoTo = 62,
+  Return = 63,
 
-  SizeOf = 62,
+  SizeOf = 64,
 
   // type specifiers
-  Int = 63,
-  Float = 64,
-  Double = 65,
-  Unsigned = 66,
-  Void = 67,
-  Char = 68,
-  Short = 69,
-  Long = 70,
-  Signed = 71,
-  Bool = 72,
-  Complex = 73, //_Complex
-  Struct = 74,
-  Union = 75,
-  Enum = 76,
+  Int = 65,
+  Float = 66,
+  Double = 67,
+  Unsigned = 68,
+  Void = 69,
+  Char = 70,
+  Short = 71,
+  Long = 72,
+  Signed = 73,
+  Bool = 74,
+  Complex = 75, //_Complex
+  Struct = 76,
+  Union = 77,
+  Enum = 78,
   // typedef-name's also fall into type specifier category
-  TypeDefName = 77,
+  TypeDefName = 79,
 
   // storage-class-specifier:
-  Typedef = 78,
-  Extern = 79,
-  Static = 80,
-  ThreadLocal = 81, // _Thread_local
-  Auto = 82,
-  Register = 83,
+  Typedef = 80,
+  Extern = 81,
+  Static = 82,
+  ThreadLocal = 83, // _Thread_local
+  Auto = 84,
+  Register = 85,
 
   // type qualifiers
-  Const = 84,
-  Restrict = 85,
-  Volatile = 86,
+  Const = 86,
+  Restrict = 87,
+  Volatile = 88,
   //  _Atomic ( type name ) is a type specifier
-  Atomic = 87,
+  Atomic = 89,
 
   // function specifiers
-  Inline = 88,
-  NoReturn = 89, // _Noreturn
+  Inline = 90,
+  NoReturn = 91, // _Noreturn
 
   // Alignment Specifier
-  AlignAs = 90 // _Alignas
+  AlignAs = 92, // _Alignas
+
+  // bitwise equals
+  XorEquals = 93,
 };
 
 struct Token {
@@ -149,5 +154,4 @@ Token *get_current_token(Lexer *);
 Token *get_next_token(Lexer *);
 Token error_token(Lexer *, const char *);
 void lexer_print_error_message(Lexer *, const char *);
-bool expect_token_type(Token *, TokenType);
 Token *expect_and_get_next_token(Lexer *, TokenType, const char *);

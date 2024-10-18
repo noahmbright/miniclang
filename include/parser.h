@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lexer.h"
+#include "type.h"
 
 #include <cstdlib>
 #include <string>
@@ -29,17 +30,13 @@ enum class DataType {
   Pointer
 };
 
-struct Object {};
-
 struct ASTNode {
   ASTNode *lhs;
   ASTNode *rhs;
-
-  Object *object;
 };
 
 ASTNode *new_ast_node();
-bool expect_token_type(Token token, TokenType type);
+bool expect_token_type(Token *token, TokenType type);
 Token expect_and_skip(Lexer *lexer, Token token, TokenType type, const char *);
 
 void parse_pointer(Lexer *);

@@ -1,14 +1,57 @@
 #pragma once
 
 #include "lexer.h"
+#include <string>
+
+struct Identifier {
+  std::string name;
+};
+
+struct FunctionType {
+  Identifier *parameter;
+  bool is_variadic;
+};
+
+struct ArrayType {};
+
+struct PointerType {};
 
 struct Declaration {
   int flags;
 };
 
-struct Type {};
+struct AbstractType {
 
-enum TypeSpecifierFlag {
+  union {
+    FunctionType function_type;
+    PointerType pointer_type;
+    ArrayType array_type;
+  } as;
+
+  AbstractType *abstract_type;
+};
+
+// a type name is a list of type specifiers/qualifiers and an optional abstract
+// declarator
+// i.e., a const *[]
+struct Type {
+  AbstractType *abstract_type;
+};
+
+struct Function {};
+
+struct Variable {};
+
+// functions or variables
+struct Object {
+  std::string name;
+  union {
+    Variable variable;
+    Function function;
+  } as;
+};
+
+enum TypeModifierFlag {
   Error = 0,
   // type-specifier
   Void = 1,
@@ -50,3 +93,4 @@ enum TypeSpecifierFlag {
 };
 
 void update_declaration(Token *, Declaration *);
+AbstractType *new_abstract_type();
