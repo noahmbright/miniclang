@@ -96,6 +96,7 @@ Token make_token(TokenType token_type, unsigned line, unsigned column,
 
 Token error_token(Lexer *lexer, const char *error_message) {
   lexer_print_error_message(lexer, error_message);
+  exit(1);
   return lexer_make_token_and_advance(lexer, TokenType::Error);
 }
 
@@ -221,23 +222,63 @@ static Token lex_string_literal(Lexer *lexer) {
   return token;
 }
 
-// valid suffixes are l, L, u, U, ll, LL,
-//                    ull, uLL, llu, LLu,
-//                    Ull, ULL, llU, LLU
-static void consume_integer_suffix(Lexer *lexer) {
-  char c = current_char(lexer);
-  std::string suffix;
-  while (is_digit(c) || is_non_digit(c)) {
-    suffix.push_back(c);
-    advance(lexer);
-    c = current_char(lexer);
+bool token_is_integer_suffix(Token *token) {
+  TokenType type = token->type;
+  switch (type) {
+  case TokenType::IntegerSuffixl:
+  case TokenType::IntegerSuffixL:
+  case TokenType::IntegerSuffixu:
+  case TokenType::IntegerSuffixU:
+  case TokenType::IntegerSuffixll:
+  case TokenType::IntegerSuffixLL:
+  case TokenType::IntegerSuffixull:
+  case TokenType::IntegerSuffixuLL:
+  case TokenType::IntegerSuffixllu:
+  case TokenType::IntegerSuffixLLu:
+  case TokenType::IntegerSuffixUll:
+  case TokenType::IntegerSuffixULL:
+  case TokenType::IntegerSuffixllU:
+  case TokenType::IntegerSuffixLLU:
+    return true;
+  default:
+    return false;
   }
+}
 
-  if (suffix != "l" || suffix != "L" || suffix != "u" || suffix != "U" ||
-      suffix != "ll" || suffix != "LL" || suffix != "ull" || suffix != "llu" ||
-      suffix != "LLu" || suffix != "Ull" || suffix != "ULL" ||
-      suffix != "llU" || suffix != "LLU")
-    error_token(lexer, "Invalid integer suffix");
+static Token lex_integer_suffix(Lexer *lexer) {
+  while (is_alphanumeric(current_char(lexer)))
+    advance(lexer);
+
+  std::string suffix = string_from_lexer(lexer);
+
+  if (suffix == "l")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixl);
+  if (suffix == "L")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixL);
+  if (suffix == "u")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixu);
+  if (suffix == "U")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixU);
+  if (suffix == "ll")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixll);
+  if (suffix == "LL")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixLL);
+  if (suffix == "ull")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixull);
+  if (suffix == "llu")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixllu);
+  if (suffix == "LLu")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixLLu);
+  if (suffix == "Ull")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixUll);
+  if (suffix == "ULL")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixULL);
+  if (suffix == "llU")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixllU);
+  if (suffix == "LLU")
+    return lexer_make_token_and_advance(lexer, TokenType::IntegerSuffixLLU);
+
+  return error_token(lexer, "invalid integer suffix");
 }
 
 static bool is_hex_digit(char c) {
@@ -248,34 +289,88 @@ static bool is_hex_digit(char c) {
 
 static bool is_octal_digit(char c) { return c <= '7' && c >= '0'; }
 
-Token consume_hexadecimal_number(Lexer *lexer) {
+static bool is_binary_digit(char c) { return c == '0' || c == '1'; }
+
+Token lex_hexadecimal_number(Lexer *lexer) {
+
+  assert(current_char(lexer) == '0' &&
+         "lex_hexadecimal_number not starting on 0");
+  advance(lexer);
+
+  assert(current_char(lexer) == 'x' &&
+         "lex_hexadecimal_number second char not x");
+  advance(lexer);
+
+  if (!is_hex_digit(current_char(lexer)))
+    return error_token(
+        lexer,
+        "numeric constant prefixed with 0x, but no hex digits following");
+
   while (is_hex_digit(current_char(lexer)))
     advance(lexer);
+
+  return lexer_make_token_without_advancing(lexer, TokenType::Number);
 }
 
-Token consume_binary_number(Lexer *lexer) {}
-Token consume_floating_point_number(Lexer *lexer) {}
-Token consume_octal_number(Lexer *lexer) {}
+Token lex_binary_number(Lexer *lexer) {
+
+  assert(current_char(lexer) == '0' && "lex_binary_number not starting on 0");
+  advance(lexer);
+
+  assert(current_char(lexer) == 'b' && "lex_binary_number second char not b");
+  advance(lexer);
+
+  if (!is_binary_digit(current_char(lexer)))
+    return error_token(
+        lexer,
+        "numeric constant prefixed with 0b, but no binary digits following");
+
+  while (is_binary_digit(current_char(lexer)))
+    advance(lexer);
+
+  return lexer_make_token_without_advancing(lexer, TokenType::Number);
+}
+
+Token lex_octal_number(Lexer *lexer) {
+
+  assert(current_char(lexer) == '0' && "lex_octal_number not starting on 0");
+  advance(lexer);
+
+  if (!is_octal_digit(current_char(lexer)))
+    return error_token(
+        lexer,
+        "numeric constant prefixed with 0, but no octal digits following");
+
+  while (is_octal_digit(current_char(lexer)))
+    advance(lexer);
+
+  return lexer_make_token_without_advancing(lexer, TokenType::Number);
+}
 
 // need to deal with signed/unsigned hex, decimal, octal, binary integers
 // need to deal with floats/double
 Token lex_number(Lexer *lexer) {
+  lexer_update_start_of_token(lexer);
+
   bool seen_decimal_point = false;
   char c = current_char(lexer);
 
+  // hex, octal, binary
+  // FIXME: Also floats starting with 0. ?
   if (c == '0') {
-    advance(lexer);
-    c = current_char(lexer);
-    if (c == 'x')
-      return consume_hexadecimal_number(lexer);
-    if (c == 'b')
-      return consume_binary_number(lexer);
-    if (c == '.')
-      return consume_floating_point_number(lexer);
-    if (is_digit(c))
-      return consume_octal_number(lexer);
+    char next_char = peek_next_char(lexer);
+
+    if (next_char == 'x')
+      return lex_hexadecimal_number(lexer);
+
+    if (next_char == 'b')
+      return lex_binary_number(lexer);
+
+    if (is_digit(next_char))
+      return lex_octal_number(lexer);
   }
 
+  // default lexing of decimal constant, potentially integer or floating point
   while (is_digit(c) || c == '.' || is_non_digit(c)) {
 
     if (c == '.') {

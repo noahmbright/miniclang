@@ -2,8 +2,6 @@
 
 #include <cassert>
 
-#define VERBOSE
-
 void assert_and_print_error(Lexer *lexer, Token *left, Token *right) {
   if (!token_equals(left, right)) {
     printf("Lexer beginning of current token: %c\n",
@@ -18,7 +16,7 @@ void assert_and_print_error(Lexer *lexer, Token *left, Token *right) {
     printf("Token right string: %s\n", right->string.c_str());
     assert(token_equals(left, right));
   }
-#ifdef VERBOSE
+#ifdef TEST_VERBOSE
   else {
     printf("successfully matched token starting with %c and having string %s\n",
            *lexer->beginning_of_current_token, left->string.c_str());

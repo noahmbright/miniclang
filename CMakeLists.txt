@@ -23,6 +23,8 @@ file(GLOB_RECURSE SOURCE_FILES
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+add_compile_definitions(TEST_VERBOSE)
+
 add_library(miniclangpp_lib ${SOURCE_FILES})
 target_link_libraries(miniclangpp_lib ${llvm_libs})
 link_libraries(miniclangpp_lib)

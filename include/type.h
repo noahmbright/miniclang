@@ -3,6 +3,8 @@
 #include "lexer.h"
 #include <string>
 
+struct Type;
+
 struct Identifier {
   std::string name;
 };
@@ -12,9 +14,13 @@ struct FunctionType {
   bool is_variadic;
 };
 
-struct ArrayType {};
+struct ArrayType {
+  Type *base;
+};
 
-struct PointerType {};
+struct PointerType {
+  Type *base;
+};
 
 struct Declaration {
   int flags;
@@ -31,10 +37,37 @@ struct AbstractType {
   AbstractType *abstract_type;
 };
 
+enum class DataType {
+  Void,
+  Char,
+  SignedChar,
+  UnsignedChar,
+  Short,
+  UnsignedShort,
+  Int,
+  UnsignedInt,
+  Long,
+  UnsignedLong,
+  LongLong,
+  UnsignedLongLong,
+  Float,
+  Double,
+  LongDouble,
+  FloatComplex,
+  DoubleComplex,
+  LongDoubleComplex,
+  Struct,
+  Union,
+  Enum,
+  TypedefName
+};
+
 // a type name is a list of type specifiers/qualifiers and an optional abstract
 // declarator
 // i.e., a const *[]
 struct Type {
+  DataType kind;
+  bool is_atomic;
   AbstractType *abstract_type;
 };
 
@@ -93,4 +126,5 @@ enum TypeModifierFlag {
 };
 
 void update_declaration(Token *, Declaration *);
+DataType type_kind_from_declaration(Declaration *declaration);
 AbstractType *new_abstract_type();

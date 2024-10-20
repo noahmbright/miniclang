@@ -1,5 +1,6 @@
 #include "type.h"
-#include "lexer.h"
+
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 
@@ -25,6 +26,7 @@ static void handle_storage_class_specifier_flag(TypeModifierFlag flag,
 
   // any of the storage classes are already specified
   if (declaration->flags &&
+
       (TypeDef || Extern || Static || ThreadLocal || Auto | Register)) {
     bool new_flag_is_thread_local = (flag == ThreadLocal);
     bool new_flag_is_extern_or_static = (flag == Static || flag == Extern);
@@ -65,7 +67,7 @@ static void handle_align_as(Declaration *declaration) {
   // typedef, or a bit-field, or a function, or a parameter, or an object
   // declared with the register storage-class specifier.
   //
-  // FIXME: Implement handle align as caveats
+  // FIXME: Implement handle alignas caveats
   //        probably want to do this in the parser
 
   set_declaration_flag(TypeModifierFlag::Alignas, declaration);
@@ -73,51 +75,51 @@ static void handle_align_as(Declaration *declaration) {
 
 void update_declaration_specifiers(Token *token, Declaration *declaration) {
   // TODO: handle static_assert
-  using enum TokenType;
   switch (token->type) {
 
-  case Void:
+    // type specifiers
+  case TokenType::Void:
     check_flag_set_and_update_if_not(TypeModifierFlag::Void, declaration);
     return;
-  case Char:
+  case TokenType::Char:
     check_flag_set_and_update_if_not(TypeModifierFlag::Char, declaration);
     return;
-  case Signed:
+  case TokenType::Signed:
     check_flag_set_and_update_if_not(TypeModifierFlag::Signed, declaration);
     return;
-  case Unsigned:
+  case TokenType::Unsigned:
     check_flag_set_and_update_if_not(TypeModifierFlag::Unsigned, declaration);
     return;
-  case Short:
+  case TokenType::Short:
     check_flag_set_and_update_if_not(TypeModifierFlag::Short, declaration);
     return;
-  case Int:
+  case TokenType::Int:
     check_flag_set_and_update_if_not(TypeModifierFlag::Int, declaration);
     return;
-  case Float:
+  case TokenType::Float:
     check_flag_set_and_update_if_not(TypeModifierFlag::Float, declaration);
     return;
-  case Double:
+  case TokenType::Double:
     check_flag_set_and_update_if_not(TypeModifierFlag::Double, declaration);
     return;
-  case Bool:
+  case TokenType::Bool:
     check_flag_set_and_update_if_not(TypeModifierFlag::Bool, declaration);
     return;
-  case Complex:
+  case TokenType::Complex:
     check_flag_set_and_update_if_not(TypeModifierFlag::Complex, declaration);
     return;
-  case TypeDefName:
+  case TokenType::TypeDefName:
     check_flag_set_and_update_if_not(TypeModifierFlag::TypeDefName,
                                      declaration);
     return;
-  case Struct:
+  case TokenType::Struct:
     check_flag_set_and_update_if_not(TypeModifierFlag::Struct, declaration);
     return;
-  case Enum:
+  case TokenType::Enum:
     check_flag_set_and_update_if_not(TypeModifierFlag::Enum, declaration);
     return;
 
-  case Long:
+  case TokenType::Long:
     if (declaration->flags & TypeModifierFlag::LongTest)
       fprintf(stderr, "Specifying too mang longs in type specification");
     else
@@ -125,23 +127,23 @@ void update_declaration_specifiers(Token *token, Declaration *declaration) {
     return;
 
     // storage class specifiers
-  case Typedef:
+  case TokenType::Typedef:
     handle_storage_class_specifier_flag(TypeModifierFlag::TypeDef, declaration);
     return;
-  case Extern:
+  case TokenType::Extern:
     handle_storage_class_specifier_flag(TypeModifierFlag::Extern, declaration);
     return;
-  case Static:
+  case TokenType::Static:
     handle_storage_class_specifier_flag(TypeModifierFlag::Static, declaration);
     return;
-  case ThreadLocal:
+  case TokenType::ThreadLocal:
     handle_storage_class_specifier_flag(TypeModifierFlag::ThreadLocal,
                                         declaration);
     return;
-  case Auto:
+  case TokenType::Auto:
     handle_storage_class_specifier_flag(TypeModifierFlag::Auto, declaration);
     return;
-  case Register:
+  case TokenType::Register:
     handle_storage_class_specifier_flag(TypeModifierFlag::Register,
                                         declaration);
     return;
@@ -150,30 +152,30 @@ void update_declaration_specifiers(Token *token, Declaration *declaration) {
     // specifier-qualifier-list, either directly or via one or more typedefs,
     // the behavior is the same as if it appeared only once.
     // FIXME: Send a warning for duplicate flag
-  case Const:
+  case TokenType::Const:
     set_declaration_flag(TypeModifierFlag::Const, declaration);
     return;
-  case Restrict:
+  case TokenType::Restrict:
     set_declaration_flag(TypeModifierFlag::Restrict, declaration);
     return;
-  case Volatile:
+  case TokenType::Volatile:
     set_declaration_flag(TypeModifierFlag::Volatile, declaration);
     return;
-  case Atomic:
+  case TokenType::Atomic:
     set_declaration_flag(TypeModifierFlag::Atomic, declaration);
     return;
 
     // function specifiers
     // A function specifier may appear more than once; the behavior is the same
     // as if it appeared only once.
-  case Inline:
+  case TokenType::Inline:
     set_declaration_flag(TypeModifierFlag::Inline, declaration);
     return;
-  case NoReturn:
+  case TokenType::NoReturn:
     set_declaration_flag(TypeModifierFlag::NoReturn, declaration);
     return;
 
-  case AlignAs:
+  case TokenType::AlignAs:
     handle_align_as(declaration);
     return;
 
@@ -184,61 +186,88 @@ void update_declaration_specifiers(Token *token, Declaration *declaration) {
   }
 }
 
-Type type_from_declaration(Declaration *declaration) {
+DataType type_kind_from_declaration(Declaration *declaration) {
   // following ChibiCC's approach for handling the multiset
   // specification for type specifiers
   // augmenting by adding that e.g. long long long has too many longs
-  Type type;
 
   // the first 13 types in TypeSpecifierFlag enum are type specifiers
   // 13 in hex is 0xd
   int declaration_type_as_int = declaration->flags & 0xd;
 
-  using enum TypeModifierFlag;
   switch (declaration_type_as_int) {
   case 0:
-    // typedef name? error?
+    // FIXME: typedef name? error?
     break;
-  case Void:
-  case Char:
-  case Signed + Char:
-  case Unsigned + Char:
 
-  case Short:
-  case Short + Signed:
-  case Short + Int:
-  case Signed + Short + Int:
+  case TypeModifierFlag::Void:
+    return DataType::Void;
 
-  case Unsigned + Short:
-  case Unsigned + Short + Int:
+  case TypeModifierFlag::Char:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Char:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Char:
+    return DataType::Void;
 
-  case Int:
-  case Signed:
-  case Signed + Int:
+  case TypeModifierFlag::Short:
+  case TypeModifierFlag::Short + TypeModifierFlag::Signed:
+  case TypeModifierFlag::Short + TypeModifierFlag::Int:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Short +
+      TypeModifierFlag::Int:
+    return DataType::Void;
 
-  case Unsigned:
-  case Unsigned + Int:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Short:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Short +
+      TypeModifierFlag::Int:
+    return DataType::Void;
 
-  case Long:
-  case Signed + Long:
-  case Long + Int:
-  case Signed + Long + Int:
+  case TypeModifierFlag::Int:
+  case TypeModifierFlag::Signed:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Int:
+    return DataType::Void;
 
-  case Unsigned + Long:
-  case Unsigned + Long + Int:
+  case TypeModifierFlag::Unsigned:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Int:
+    return DataType::Void;
 
-  case Long + Long:
-  case Signed + Long + Long:
-  case Long + Long + Int:
+  case TypeModifierFlag::Long:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Long:
+  case TypeModifierFlag::Long + TypeModifierFlag::Int:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Long +
+      TypeModifierFlag::Int:
+    return DataType::Void;
 
-  case Float:
-  case Double:
-  case Long + Double:
-  case Bool:
-  case Float + Complex:
-  case Double + Complex:
-  case Long + Double + Complex:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Long:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Long +
+      TypeModifierFlag::Int:
+    return DataType::Void;
+
+  case TypeModifierFlag::Long + TypeModifierFlag::Long:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Long +
+      TypeModifierFlag::Long:
+  case TypeModifierFlag::Long + TypeModifierFlag::Long + TypeModifierFlag::Int:
+    return DataType::Void;
+
+  case TypeModifierFlag::Float:
+    return DataType::Void;
+
+  case TypeModifierFlag::Double:
+    return DataType::Void;
+
+  case TypeModifierFlag::Long + TypeModifierFlag::Double:
+    return DataType::Void;
+
+  case TypeModifierFlag::Bool:
+    return DataType::Void;
+
+  case TypeModifierFlag::Float + TypeModifierFlag::Complex:
+    return DataType::Void;
+
+  case TypeModifierFlag::Double + TypeModifierFlag::Complex:
+    return DataType::Void;
+
+  case TypeModifierFlag::Long + TypeModifierFlag::Double +
+      TypeModifierFlag::Complex:
+    return DataType::Void;
   }
-
-  return type;
+  assert(false && "TypeKind from declaration UNREACHABLE");
 }
