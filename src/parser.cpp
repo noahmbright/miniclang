@@ -220,6 +220,7 @@ static ASTNode *parse_primary_expression(Lexer *lexer, Scope *scope) {
   case TokenType::Identifier:
 
   case TokenType::Number:
+    return parse_number(lexer);
 
   default:
     assert(false && "Default case in parse_primary_expression");
