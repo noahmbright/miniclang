@@ -271,3 +271,39 @@ DataType type_kind_from_declaration(Declaration *declaration) {
   }
   assert(false && "TypeKind from declaration UNREACHABLE");
 }
+
+bool is_integer_type(DataType t) {
+  switch (t) {
+  case DataType::SignedChar:
+  case DataType::Char:
+  case DataType::Int:
+  case DataType::UnsignedInt:
+  case DataType::Long:
+  case DataType::UnsignedLong:
+  case DataType::LongLong:
+  case DataType::UnsignedLongLong:
+  case DataType::Short:
+  case DataType::UnsignedShort:
+  case DataType::EnumeratedValue:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+bool is_floating_type(DataType t) {
+  switch (t) {
+  case DataType::Float:
+  case DataType::Double:
+  case DataType::LongDouble:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+bool is_arithmetic_type(DataType t) {
+  return is_integer_type(t) || is_floating_type(t);
+}

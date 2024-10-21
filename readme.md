@@ -7,6 +7,17 @@ classes. Resources used in learning how to write a C compiler are included in
 The syntactic sugar and closeness to the tutorial are what motivated the 
 choice, so alas, this compiler will not be able to compile itself. 
 
+## Status
+
+Don't use this for anything. Not that it even works yet.
+
+TODOs:
+
+* Potentially refactor the lexer. Both to allow for preprocessing and to 
+allow for testing the parser with independent token streams
+
+* Decide on how/when to type check and type cast as we parse expressions
+
 ## Goals and non-goals
 
 Fundamentally a learning project, the goal is not to make a perfect spec
@@ -71,4 +82,9 @@ good resource for a second opinion. The intro knowledge is good for
 demystifying and making compilers approachable, and it's goal is sufficiently
 different from a C compiler that you need to make leaps between what you're
 doing and what he shows, which is a good exercise. Credit for giving me the
-courage to use unions.
+courage to use unions. 
+
+Special credit to:
+* Chapter 6 on recursive descent for helping transform the C
+specification's left recursive grammar. 
+* Chapter 16 on the lexer in C, even though I cheated and used `std::string`

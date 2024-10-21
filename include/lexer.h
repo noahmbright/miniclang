@@ -24,7 +24,7 @@ enum class TokenType {
   Semicolon, // 15
   Plus,
   Minus,
-  ForwardSlash, //
+  ForwardSlash, // for division
   BackSlash,    /* \ */
   GreaterThan,
   LessThan,

@@ -14,7 +14,36 @@ struct Scope {
   std::unordered_set<std::string> typedef_names;
 };
 
-enum class ASTNodeType { NumericConstant, Variable, Declaration };
+enum class ASTNodeType {
+  // primary expressions
+  NumericConstant,
+  Variable,
+
+  // binary expressions
+  Multiplication,
+  Division,
+  Modulo,
+  Addition,
+  Subtraction,
+  BitShiftLeft,
+  BitShiftRight,
+  GreaterThan,
+  GreaterThanOrEqualTo,
+  LessThan,
+  LessThanOrEqualTo,
+  EqualityComparison,
+  InequalityComparison,
+  BitwiseAnd,
+  BitwiseXor,
+  BitwiseOr,
+  LogicalAnd,
+  LogicalOr,
+  ConditionalExpression,
+  Assignment,
+
+  // declarations
+  Declaration
+};
 
 struct ASTNode {
   ASTNodeType type;

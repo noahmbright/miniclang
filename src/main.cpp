@@ -1,7 +1,7 @@
 #include <iostream>
-#include <llvm/IR/BasicBlock.h>
 
 int main() {
-  std::cout << "fuuuuuk";
+  std::cout << "Hello from miniclangpp. This program doesn't do anything yet. "
+               "Come back again and it might!";
   return 0;
 }

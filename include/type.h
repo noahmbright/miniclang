@@ -59,6 +59,7 @@ enum class DataType {
   Struct,
   Union,
   Enum,
+  EnumeratedValue,
   TypedefName
 };
 
@@ -128,3 +129,6 @@ enum TypeModifierFlag {
 void update_declaration(Token *, Declaration *);
 DataType type_kind_from_declaration(Declaration *declaration);
 AbstractType *new_abstract_type();
+bool is_arithmetic_type(DataType t);
+bool is_integer_type(DataType t);
+bool is_floating_type(DataType t);

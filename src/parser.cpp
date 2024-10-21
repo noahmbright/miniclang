@@ -262,14 +262,106 @@ ASTNode *parse_unary_expression(Lexer *lexer);
 //          (typename) cast-expr
 ASTNode *parse_cast_expression(Lexer *lexer);
 
+// hereafter, each binary operator and its precedence is defined through
+// left-recursive productions
+//
+// unwinding the cast-expr grammar, a simple valid cast-expr is the const 1 or
+// 2
+//
+// forward referencing the next rule for mult-exprs, a cast-expr is a valid
+// mult-expr, so 1 or 2 is also a valid mult-expr. Therefore, we are justified
+// in stopping if all we have is a cast-expr followed by no (* or / or %)
+//
+// using the second production, we could also have 1 * 2, and recurring from
+// there, 1 * 2 / 3, so on and so forth
+//
+// What should the AST for 1 * 2 / 3 look like? It should evaluate from left to
+// right and give
+//          *
+//         / \
+//        1   operator /
+//              / \
+//             2   3
+//
+// we hit our Number token 1 which we want to give us the lhs of this
+// ASTNode
+//
+// we advance, and we see the next token is a *, so we recursively call
+// parse_multiplicative_expression again, and this should return us the rhs of
+// the node from the first call -  this rhs will be the division node with
+// lhs 2 and rhs 3
+//
+// What if we don't see a multiplicative operator? Then we don't have a bonafied
+// multiplication node. That's fine, then we just pop up the information from
+// the cast node parse we have to do anyway. The cast node probably doesn't even
+// have a type cast either, it's most likely we'll have to propagate up to an
+// identifier or something
+//
+// so we can transform this rule into a cast-expr followed by 0 or more (* or /
+// or %) and another cast-expr. If we see one of the right operators, we return
+// a node with rhs and lhs properly set. If not, we just return whatever the
+// cast node gave us
+//
+// the other thing to consider is how this handles operator precedence. After
+// mult-exprs, we have add-exprs. Citing PEMDAS, multiplicative expressions have
+// higher precedence, so 2 + 3 * 4 should give
+//          +
+//         / \
+//        2   *
+//           / \
+//          3   4
+//
+// add-expr is defined in terms of mult-expr, so if we have a bonafide add-expr,
+// we'll be setting an lhs and rhs, and in order to set those, we'll call
+// mult-expr. If the mult-expr is a bonafide multiplication, it will return a
+// node with a multiplication operator at it's root, and an lhs and rhs with its
+// operands back to the add-expr
+//
+// finally, these "rule (operator rule)*" rules we'll implement can naturally be
+// implemented either recursively or iteratively
+// recursion is prettier, but can inflate your call stack
+// since the call stack already has to trudge through 15 levels to get to a
+// primary expression, we'll be nice to it and go iterative
+//
+
+// FIXME: When to do type checking/casting?
+ASTNode *new_binary_expression_node(ASTNodeType type, ASTNode *lhs,
+                                    ASTNode *rhs) {
+  ASTNode *binary_ast_node = new_ast_node(type);
+  binary_ast_node->lhs = lhs;
+  binary_ast_node->rhs = rhs;
+
+  return binary_ast_node;
+}
+
 // 6.5.5 mult-expr
 //          cast-expr
 //          mult-expr (* or / or %) cast-expr
-ASTNode *parse_multiplicative_expression(Lexer *lexer);
+//
+// implement as:
+//      mult-expr: cast-expr ((* or / or %) cast-expr)*
+ASTNode *parse_multiplicative_expression(Lexer *lexer) {
+  ASTNode *cast_expr = parse_cast_expression(lexer);
+
+  for (;;) {
+    switch (get_next_token(lexer)->type) {
+    case TokenType::Asterisk:
+      return new_binary_expression_node(ASTNodeType::Multiplication, cast_expr,
+                                        parse_cast_expression(lexer));
+
+    case TokenType::ForwardSlash:
+
+    case TokenType::Modulo:
+
+    default:
+      return cast_expr;
+    }
+  }
+}
 
 // 6.5.6 add-expr
 //          mult-expr
-//          add-expr (* or /) mult-expr
+//          add-expr (+ or -) mult-expr
 ASTNode *parse_additive_expression(Lexer *lexer);
 
 // 6.5.7 shift-expr
