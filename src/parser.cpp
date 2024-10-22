@@ -10,6 +10,7 @@ Object *parse_declarator(Lexer *lexer);
 ASTNode *parse_init_declarator(Lexer *);
 AbstractType *parse_abstract_declarator(Lexer *lexer);
 Object *parse_direct_declarator(Lexer *lexer, Object *object = nullptr);
+ASTNode *parse_expression(Lexer *lexer);
 
 ASTNode *new_ast_node(ASTNodeType type) {
   ASTNode *new_node = (ASTNode *)malloc(sizeof(ASTNode));
@@ -304,7 +305,7 @@ ASTNode *parse_cast_expression(Lexer *lexer);
 //
 // the other thing to consider is how this handles operator precedence. After
 // mult-exprs, we have add-exprs. Citing PEMDAS, multiplicative expressions have
-// higher precedence, so 2 + 3 * 4 should give
+// higher precedence than addition, so 2 + 3 * 4 should give
 //          +
 //         / \
 //        2   *
@@ -340,74 +341,268 @@ ASTNode *new_binary_expression_node(ASTNodeType type, ASTNode *lhs,
 //
 // implement as:
 //      mult-expr: cast-expr ((* or / or %) cast-expr)*
+//
+// how do we process the while loop? unless we see a *, then we just return the
+// cast node. If we see a *, the node becomes a multiplication node with an LHS
+// equal to the cast node we initially parse, and an RHS equal to the result of
+// parsing a cast starting on the next node
 ASTNode *parse_multiplicative_expression(Lexer *lexer) {
-  ASTNode *cast_expr = parse_cast_expression(lexer);
+  // get lhs, root of this parse subtree is whatever the cast expr gives us
+  ASTNode *root = parse_cast_expression(lexer);
 
-  for (;;) {
-    switch (get_next_token(lexer)->type) {
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type == TokenType::Asterisk ||
+         current_token->type == TokenType::ForwardSlash ||
+         current_token->type == TokenType::Modulo) {
+
+    switch (current_token->type) {
+      // hit *, now the root should be the multiplication operation
     case TokenType::Asterisk:
-      return new_binary_expression_node(ASTNodeType::Multiplication, cast_expr,
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::Multiplication, root,
                                         parse_cast_expression(lexer));
 
     case TokenType::ForwardSlash:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::Division, root,
+                                        parse_cast_expression(lexer));
 
     case TokenType::Modulo:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::Modulo, root,
+                                        parse_cast_expression(lexer));
 
     default:
-      return cast_expr;
+      break;
     }
   }
+
+  get_next_token(lexer);
+  return root;
 }
 
 // 6.5.6 add-expr
 //          mult-expr
 //          add-expr (+ or -) mult-expr
-ASTNode *parse_additive_expression(Lexer *lexer);
+ASTNode *parse_additive_expression(Lexer *lexer) {
+  ASTNode *root = parse_multiplicative_expression(lexer);
+
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type == TokenType::Plus ||
+         current_token->type == TokenType::Minus) {
+    switch (current_token->type) {
+    case TokenType::Plus:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::Addition, root,
+                                        parse_multiplicative_expression(lexer));
+
+    case TokenType::Minus:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::Subtraction, root,
+                                        parse_multiplicative_expression(lexer));
+
+    default:
+      break;
+    }
+  }
+
+  return root;
+}
 
 // 6.5.7 shift-expr
 //          add-expr
 //          shift-expr (>> or <<) add-expr
-ASTNode *parse_shift_expression(Lexer *lexer);
+ASTNode *parse_shift_expression(Lexer *lexer) {
+  ASTNode *root = parse_additive_expression(lexer);
+
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type == TokenType::BitShiftLeft ||
+         current_token->type == TokenType::BitShiftRight) {
+    switch (current_token->type) {
+    case TokenType::BitShiftLeft:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
+                                        parse_additive_expression(lexer));
+
+    case TokenType::BitShiftRight:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
+                                        parse_additive_expression(lexer));
+
+    default:
+      break;
+    }
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.8 relational-expr
 //          shift-expr
 //          relational-expr (< or > or <= or >=) shift-expr
-ASTNode *parse_relational_expression(Lexer *lexer);
+ASTNode *parse_relational_expression(Lexer *lexer) {
+  ASTNode *root = parse_shift_expression(lexer);
+
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type == TokenType::LessThan ||
+         current_token->type == TokenType::LessThanOrEqualTo ||
+         current_token->type == TokenType::GreaterThan ||
+         current_token->type == TokenType::GreaterThanOrEqualTo) {
+    switch (current_token->type) {
+    case TokenType::LessThan:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::LessThan, root,
+                                        parse_shift_expression(lexer));
+
+    case TokenType::LessThanOrEqualTo:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::LessThanOrEqualTo, root,
+                                        parse_shift_expression(lexer));
+
+    case TokenType::GreaterThan:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::GreaterThan, root,
+                                        parse_shift_expression(lexer));
+
+    case TokenType::GreaterThanOrEqualTo:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::GreaterThanOrEqualTo, root,
+                                        parse_shift_expression(lexer));
+
+    default:
+      break;
+    }
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.9 equality-expr
 //          relational-expr
 //          equality-expr (== or !=) relational-expr
-ASTNode *parse_equality_expression(Lexer *lexer);
+ASTNode *parse_equality_expression(Lexer *lexer) {
+  ASTNode *root = parse_relational_expression(lexer);
+
+  Token *current_token = get_next_token(lexer);
+  while (current_token->type == TokenType::BitShiftLeft ||
+         current_token->type == TokenType::BitShiftRight) {
+    switch (current_token->type) {
+    case TokenType::BitShiftLeft:
+      current_token = get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
+                                        parse_relational_expression(lexer));
+
+    case TokenType::BitShiftRight:
+      get_next_token(lexer);
+      root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
+                                        parse_relational_expression(lexer));
+
+    default:
+      break;
+    }
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.10 and-expr
 //          eq-expr
 //          and-expr & eq-expr
-ASTNode *parse_bitwise_and_expression(Lexer *lexer);
+ASTNode *parse_bitwise_and_expression(Lexer *lexer) {
+  ASTNode *root = parse_equality_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::Ampersand) {
+    get_next_token(lexer);
+    root = new_binary_expression_node(ASTNodeType::BitwiseAnd, root,
+                                      parse_equality_expression(lexer));
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.11 xor-expr
 //          and-expr
 //          xor-expr ^ and-expr
-ASTNode *parse_bitwise_xor_expression(Lexer *lexer);
+ASTNode *parse_bitwise_xor_expression(Lexer *lexer) {
+  ASTNode *root = parse_bitwise_and_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::Caret) {
+    get_next_token(lexer);
+    root = new_binary_expression_node(ASTNodeType::BitwiseXor, root,
+                                      parse_bitwise_and_expression(lexer));
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.12 or-expr
 //          xor-expr
 //          or-expr | xor-expr
-ASTNode *parse_bitwise_or_expression(Lexer *lexer);
+ASTNode *parse_bitwise_or_expression(Lexer *lexer) {
+  ASTNode *root = parse_bitwise_xor_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::Pipe) {
+    get_next_token(lexer);
+    root = new_binary_expression_node(ASTNodeType::BitwiseOr, root,
+                                      parse_bitwise_xor_expression(lexer));
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.13 logical-and-expr
 //          inclusive-or-expr
 //          local-and-expr && inclusive-or
-ASTNode *parse_logical_and_expression(Lexer *lexer);
+ASTNode *parse_logical_and_expression(Lexer *lexer) {
+  ASTNode *root = parse_bitwise_or_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::LogicalAnd) {
+    get_next_token(lexer);
+    root = new_binary_expression_node(ASTNodeType::LogicalAnd, root,
+                                      parse_bitwise_or_expression(lexer));
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.14 logical-or-expr
 //          logical-and-expr
 //          logical-or-expr || logical-and-expr
-ASTNode *parse_logical_or_expression(Lexer *lexer);
+ASTNode *parse_logical_or_expression(Lexer *lexer) {
+  ASTNode *root = parse_logical_and_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::LogicalOr) {
+    get_next_token(lexer);
+    root = new_binary_expression_node(ASTNodeType::LogicalOr, root,
+                                      parse_logical_and_expression(lexer));
+  }
+
+  get_next_token(lexer);
+  return root;
+}
+
+int x = true ? false ? 0 : 1 : 2;
 
 // 6.5.15 conditional-expression
 //          logical-or-expr
 //          logical-or-expr ? expression : conditional-expression
-ASTNode *parse_conditional_expression(Lexer *lexer);
+ASTNode *parse_conditional_expression(Lexer *lexer) {
+  ASTNode *root = parse_logical_or_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::QuestionMark) {
+    // FIXME: Conditional statements
+  }
+
+  get_next_token(lexer);
+  return root;
+}
 
 // 6.5.16
 // Assignment expression:
@@ -422,7 +617,26 @@ static bool is_assignment_operator(Token *token) {
           t == BitwiseAndEquals || t == XorEquals || t == BitwiseOrEquals);
 }
 
-ASTNode *parse_assignment_expression(Lexer *lexer) {}
+ASTNode *parse_assignment_expression(Lexer *lexer) {
+  ASTNode *root = parse_conditional_expression(lexer);
+
+  return root;
+}
+
+// 6.5.17 Comma operator
+// expression:
+//      assignment-expression
+//      expression, assignment-expression
+ASTNode *parse_expression(Lexer *lexer) {
+  ASTNode *root = parse_assignment_expression(lexer);
+
+  while (get_next_token(lexer)->type == TokenType::Comma) {
+    get_next_token(lexer);
+    // FIXME: Do I want to handle this as if it's a binary node?
+  }
+
+  return root;
+}
 
 // 6.7 Declarations
 // declaration: declaration-specifier init-declarator-list(optional)
