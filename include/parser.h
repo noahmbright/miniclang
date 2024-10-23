@@ -15,6 +15,8 @@ struct Scope {
 };
 
 enum class ASTNodeType {
+  Void,
+
   // primary expressions
   NumericConstant,
   Variable,
@@ -70,10 +72,14 @@ struct ASTNode {
   ASTNode *next;
   ASTNode *lhs;
   ASTNode *rhs;
+
+  // for ternary conditional
+  ASTNode *conditional;
 };
 
 ASTNode *new_ast_node(ASTNodeType);
 bool expect_token_type(Token *token, TokenType type);
 Token expect_and_skip(Lexer *lexer, Token token, TokenType type, const char *);
 
-void parse_pointer(Lexer *);
+ASTNode *parse_expression(Lexer *lexer);
+ASTNode *parse_primary_expression(Lexer *lexer /*, Scope *scope*/);

@@ -126,7 +126,7 @@ enum TypeModifierFlag {
   Enum = 1 << 30
 };
 
-void update_declaration(Token *, Declaration *);
+void update_declaration_specifiers(const Token *, Declaration *);
 DataType type_kind_from_declaration(Declaration *declaration);
 AbstractType *new_abstract_type();
 bool is_arithmetic_type(DataType t);

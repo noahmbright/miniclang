@@ -24,6 +24,7 @@ file(GLOB_RECURSE SOURCE_FILES
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_compile_definitions(TEST_VERBOSE)
+add_compile_options(-Wall -Wextra -pedantic -Werror -Fsanitize=address)
 
 add_library(miniclangpp_lib ${SOURCE_FILES})
 target_link_libraries(miniclangpp_lib ${llvm_libs})
@@ -32,3 +33,4 @@ link_libraries(miniclangpp_lib)
 add_executable(miniclangpp ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
 add_executable(lexer_test ${CMAKE_SOURCE_DIR}/tests/lexer.cpp)
+add_executable(parser_test ${CMAKE_SOURCE_DIR}/tests/parser.cpp)

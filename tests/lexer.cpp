@@ -2,7 +2,8 @@
 
 #include <cassert>
 
-void assert_and_print_error(Lexer *lexer, Token *left, Token *right) {
+void assert_and_print_error(Lexer *lexer, const Token *left,
+                            const Token *right) {
   if (!token_equals(left, right)) {
     printf("Lexer beginning of current token: %c\n",
            *lexer->beginning_of_current_token);
@@ -25,12 +26,16 @@ void assert_and_print_error(Lexer *lexer, Token *left, Token *right) {
 #endif
 }
 
-Token int_token = make_token(TokenType::Int, 0, 0);
-Token x_token = make_token(TokenType::Identifier, 0, 0, "x");
-Token equal_token = make_token(TokenType::Equals, 0, 0);
-Token five_token = make_token(TokenType::Number, 0, 0, "5");
-Token semicolon_token = make_token(TokenType::Semicolon, 0, 0);
-Token eof_token = make_token(TokenType::Eof, 0, 0);
+const Token int_token = make_token(TokenType::Int, 0, 0);
+const Token x_token = make_token(TokenType::Identifier, 0, 0, "x");
+const Token equal_token = make_token(TokenType::Equals, 0, 0);
+const Token five_token = make_token(TokenType::Number, 0, 0, "5");
+const Token twenty_token = make_token(TokenType::Number, 0, 0, "20");
+const Token semicolon_token = make_token(TokenType::Semicolon, 0, 0);
+const Token asterisk_token = make_token(TokenType::Asterisk, 0, 0);
+const Token division_token = make_token(TokenType::ForwardSlash, 0, 0);
+const Token modulo_token = make_token(TokenType::Modulo, 0, 0);
+const Token eof_token = make_token(TokenType::Eof, 0, 0);
 
 void test1() {
   printf("running lexer test 1...\n");
@@ -38,6 +43,7 @@ void test1() {
   const char *test1 = "int x = 5;";
   Lexer lexer1 = new_lexer(test1);
 
+  assert(get_current_token(&lexer1)->type == TokenType::NotStarted);
   assert_and_print_error(&lexer1, get_next_token(&lexer1), &int_token);
   assert_and_print_error(&lexer1, get_next_token(&lexer1), &x_token);
   assert_and_print_error(&lexer1, get_next_token(&lexer1), &equal_token);
@@ -53,6 +59,7 @@ void test2() {
   const char *test2 = "int x=5;";
   Lexer lexer2 = new_lexer(test2);
 
+  assert(get_current_token(&lexer2)->type == TokenType::NotStarted);
   assert_and_print_error(&lexer2, get_next_token(&lexer2), &int_token);
   assert_and_print_error(&lexer2, get_next_token(&lexer2), &x_token);
   assert_and_print_error(&lexer2, get_next_token(&lexer2), &equal_token);
@@ -63,9 +70,65 @@ void test2() {
   printf("Lexer test 2 passed\n\n");
 }
 
+void test3() {
+  printf("running lexer test 3...\n");
+  const char *test = "5";
+  Lexer lexer = new_lexer(test);
+
+  assert(get_current_token(&lexer)->type == TokenType::NotStarted);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &five_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &eof_token);
+  printf("Lexer test 3 passed\n\n");
+}
+
+void test4() {
+  printf("running lexer test 4...\n");
+  const char *test = "20";
+  Lexer lexer = new_lexer(test);
+
+  assert(get_current_token(&lexer)->type == TokenType::NotStarted);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &twenty_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &eof_token);
+  printf("Lexer test 4 passed\n\n");
+}
+
+void test5() {
+  printf("running lexer test 5...\n");
+  const char *test = "20 * 5";
+  Lexer lexer = new_lexer(test);
+
+  assert(get_current_token(&lexer)->type == TokenType::NotStarted);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &twenty_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &asterisk_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &five_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &eof_token);
+  printf("Lexer test 5 passed\n\n");
+}
+
+void test6() {
+  printf("running lexer test 5...\n");
+  const char *test = "20 * 5 / 20 % 5";
+  Lexer lexer = new_lexer(test);
+
+  assert(get_current_token(&lexer)->type == TokenType::NotStarted);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &twenty_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &asterisk_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &five_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &division_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &twenty_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &modulo_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &five_token);
+  assert_and_print_error(&lexer, get_next_token(&lexer), &eof_token);
+  printf("Lexer test 5 passed\n\n");
+}
+
 int main() {
   printf("running lexer tests...\n");
 
   test1();
   test2();
+  test3();
+  test4();
+  test5();
+  test6();
 }

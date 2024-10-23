@@ -4,13 +4,14 @@
 
 enum class TokenType {
   // compiler internals
-  Eof,
+  NotStarted = -1,
+  Eof = 0,
   Identifier,
   Error,
   StringLiteral,
   Number,
 
-  // Punctuai
+  // Punctuaion
   Comma,
   Dot,
   Bang,
@@ -163,12 +164,12 @@ struct Lexer {
 Lexer new_lexer(const char *);
 void tokenize_char_ptr(const char *);
 Token make_token(TokenType, unsigned, unsigned, std::string = "");
-bool token_equals(Token *, Token *);
+bool token_equals(const Token *, const Token *);
 
 Token *get_current_token(Lexer *);
-Token *get_next_token(Lexer *);
+const Token *get_next_token(Lexer *);
 Token error_token(Lexer *, const char *);
 void lexer_print_error_message(Lexer *, const char *);
-Token *expect_and_get_next_token(Lexer *, TokenType, const char *);
+const Token *expect_and_get_next_token(Lexer *, TokenType, const char *);
 
 bool token_is_integer_suffix(Token *);

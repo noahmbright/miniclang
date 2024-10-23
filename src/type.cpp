@@ -25,9 +25,8 @@ static void handle_storage_class_specifier_flag(TypeModifierFlag flag,
   using enum TypeModifierFlag;
 
   // any of the storage classes are already specified
-  if (declaration->flags &&
-
-      (TypeDef || Extern || Static || ThreadLocal || Auto | Register)) {
+  if (declaration->flags &
+      (TypeDef | Extern | Static | ThreadLocal | Auto | Register)) {
     bool new_flag_is_thread_local = (flag == ThreadLocal);
     bool new_flag_is_extern_or_static = (flag == Static || flag == Extern);
 
@@ -73,7 +72,8 @@ static void handle_align_as(Declaration *declaration) {
   set_declaration_flag(TypeModifierFlag::Alignas, declaration);
 }
 
-void update_declaration_specifiers(Token *token, Declaration *declaration) {
+void update_declaration_specifiers(const Token *token,
+                                   Declaration *declaration) {
   // TODO: handle static_assert
   switch (token->type) {
 

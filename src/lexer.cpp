@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstdio>
 
-bool token_equals(Token *left, Token *right) {
+bool token_equals(const Token *left, const Token *right) {
   return left->type == right->type && left->string == right->string;
 }
 
@@ -14,12 +14,15 @@ static void lexer_update_start_of_token(Lexer *lexer) {
 }
 
 static void advance(Lexer *lexer) {
+  if (*lexer->current_location == '\0')
+    return;
   lexer->current_location++;
   lexer->current_column++;
 }
 
 Lexer new_lexer(const char *text) {
   Lexer lexer;
+  // printf("initializing lexer with input: %s\n", text);
 
   lexer.current_filepath = text;
   lexer.current_location = text;
@@ -31,13 +34,15 @@ Lexer new_lexer(const char *text) {
   lexer.current_line = 0;
   lexer.current_column = 0;
 
+  lexer.current_token.type = TokenType::NotStarted;
+
   return lexer;
 }
 
 Token *get_current_token(Lexer *lexer) { return &lexer->current_token; }
 
 Token recover_and_return_error_token(Lexer *lexer, Token error_token) {
-  Token *current_token = get_next_token(lexer);
+  const Token *current_token = get_next_token(lexer);
   while (current_token->type != TokenType::Semicolon &&
          current_token->type != TokenType::Eof)
     current_token = get_next_token(lexer);
@@ -55,12 +60,11 @@ bool expect_token_type(Token *token, TokenType type) {
   return token->type == type;
 }
 
-Token *expect_and_get_next_token(Lexer *lexer, TokenType type,
-                                 const char *error_message) {
+const Token *expect_and_get_next_token(Lexer *lexer, TokenType type,
+                                       const char *error_message) {
 
-  Token *next_tok = get_next_token(lexer);
-  if (expect_token_type(next_tok, type))
-    return next_tok;
+  if (expect_token_type(get_current_token(lexer), type))
+    return get_next_token(lexer);
 
   lexer->current_token = error_token(lexer, error_message);
   return &lexer->current_token;
@@ -128,7 +132,7 @@ static char char_lookahead(Lexer *lexer, int n) {
 
 static char peek_next_char(Lexer *lexer) { return char_lookahead(lexer, 1); }
 
-static char prev_char(Lexer *lexer) { return char_lookahead(lexer, -1); }
+// static char prev_char(Lexer *lexer) { return char_lookahead(lexer, -1); }
 
 static void skip_whitespace(Lexer *lexer) {
   while (is_whitespace(current_char(lexer))) {
@@ -204,9 +208,9 @@ static std::string string_from_lexer(Lexer *lexer) {
                      lexer->beginning_of_current_token + token_length(lexer));
 }
 
+/*
 static Token lex_string_literal(Lexer *lexer) {
   assert(current_char(lexer) == '"');
-  advance(lexer);
   lexer->beginning_of_current_token = lexer->current_location;
 
   while (peek_next_char(lexer) != '"' && current_char(lexer) != '\\')
@@ -221,6 +225,7 @@ static Token lex_string_literal(Lexer *lexer) {
 
   return token;
 }
+*/
 
 bool token_is_integer_suffix(Token *token) {
   TokenType type = token->type;
@@ -245,7 +250,7 @@ bool token_is_integer_suffix(Token *token) {
   }
 }
 
-static Token lex_integer_suffix(Lexer *lexer) {
+/*static Token lex_integer_suffix(Lexer *lexer) {
   while (is_alphanumeric(current_char(lexer)))
     advance(lexer);
 
@@ -280,11 +285,12 @@ static Token lex_integer_suffix(Lexer *lexer) {
 
   return error_token(lexer, "invalid integer suffix");
 }
+*/
 
 static bool is_hex_digit(char c) {
   bool is_upper_hex = (c >= 'A' && c <= 'F');
   bool is_lower_hex = (c >= 'a' && c <= 'f');
-  return is_digit(c) || is_lower_hex || is_lower_hex;
+  return is_digit(c) || is_lower_hex || is_upper_hex;
 }
 
 static bool is_octal_digit(char c) { return c <= '7' && c >= '0'; }
@@ -371,7 +377,7 @@ Token lex_number(Lexer *lexer) {
   }
 
   // default lexing of decimal constant, potentially integer or floating point
-  while (is_digit(c) || c == '.' || is_non_digit(c)) {
+  while (is_digit(c) /*|| c == '.' || is_non_digit(c)*/) {
 
     if (c == '.') {
       if (seen_decimal_point)
@@ -388,7 +394,6 @@ Token lex_number(Lexer *lexer) {
     }
 
     advance(lexer);
-
     c = current_char(lexer);
   }
 
@@ -397,7 +402,7 @@ Token lex_number(Lexer *lexer) {
 }
 
 static char peek_char_in_token(Lexer *lexer, unsigned idx) {
-  int length = token_length(lexer);
+  unsigned int length = token_length(lexer);
   if (idx < length)
     return lexer->beginning_of_current_token[idx];
   return '\0';
@@ -530,6 +535,13 @@ Token lex_next_token(Lexer *lexer) {
       return lexer_make_token_and_advance(lexer, TokenType::DividedByEquals);
     }
     return lexer_make_token_and_advance(lexer, TokenType::ForwardSlash);
+
+  case '%':
+    if (peek_next_char(lexer) == '=') {
+      advance(lexer);
+      return lexer_make_token_and_advance(lexer, TokenType::ModuloEquals);
+    }
+    return lexer_make_token_and_advance(lexer, TokenType::Modulo);
 
   case '<':
     // <=
@@ -774,7 +786,10 @@ Token lex_next_token(Lexer *lexer) {
   assert(false && "Lex next token UNREACHABLE");
 }
 
-Token *get_next_token(Lexer *lexer) {
+const Token *get_next_token(Lexer *lexer) {
+  if (lexer->current_token.type == TokenType::Eof)
+    return &lexer->current_token;
+
   lexer->current_token = lex_next_token(lexer);
   return &lexer->current_token;
 }
