@@ -22,7 +22,7 @@ struct PointerType {
   Type *base;
 };
 
-struct Declaration {
+struct DeclarationSpecifierFlags {
   int flags;
 };
 
@@ -56,6 +56,7 @@ enum class DataType {
   FloatComplex,
   DoubleComplex,
   LongDoubleComplex,
+  Bool,
   Struct,
   Union,
   Enum,
@@ -89,46 +90,48 @@ enum TypeModifierFlag {
   Error = 0,
   // type-specifier
   Void = 1,
-  Char = 1 << 2,
-  Signed = 1 << 3,
-  Unsigned = 1 << 4,
-  Short = 1 << 5,
+  Char = 1 << 1,
+  Signed = 1 << 2,
+  Unsigned = 1 << 3,
+  Short = 1 << 4,
   // long can appear up to two times, so give it an extra bit
-  Long = 1 << 6,
-  LongTest = 1 << 7,
-  Int = 1 << 8,
-  Float = 1 << 9,
-  Double = 1 << 11,
-  Bool = 1 << 12,
-  Complex = 1 << 13,
+  Long = 1 << 5,
+  LongTest = 1 << 6,
+  Int = 1 << 7,
+  Float = 1 << 8,
+  Double = 1 << 9,
+  Bool = 1 << 10,
+  Complex = 1 << 11,
 
   // storage-class-specifier
-  TypeDef = 1 << 14,
-  Extern = 1 << 15,
-  Static = 1 << 16,
-  ThreadLocal = 1 << 17,
-  Auto = 1 << 18,
-  Register = 1 << 19,
+  TypeDef = 1 << 12,
+  Extern = 1 << 13,
+  Static = 1 << 14,
+  ThreadLocal = 1 << 15,
+  Auto = 1 << 16,
+  Register = 1 << 17,
   // type-qualifier
-  Const = 1 << 20,
-  Restrict = 1 << 21,
-  Volatile = 1 << 23,
-  Atomic = 1 << 24,
+  Const = 1 << 18,
+  Restrict = 1 << 19,
+  Volatile = 1 << 20,
+  Atomic = 1 << 21,
   // function-specifier
-  Inline = 1 << 25,
-  NoReturn = 1 << 26,
+  Inline = 1 << 22,
+  NoReturn = 1 << 23,
   // alignment-specifier
-  Alignas = 1 << 27,
+  Alignas = 1 << 24,
 
   // forgot the unbolded type-specifiers
-  TypeDefName = 1 << 28,
-  Struct = 1 << 29,
-  Enum = 1 << 30
+  TypeDefName = 1 << 25,
+  Struct = 1 << 26,
+  Enum = 1 << 27
 };
 
-void update_declaration_specifiers(const Token *, Declaration *);
-DataType type_kind_from_declaration(Declaration *declaration);
+void update_declaration_specifiers(const Token *, DeclarationSpecifierFlags *);
+DataType type_kind_from_declaration(DeclarationSpecifierFlags *declaration);
+
 AbstractType *new_abstract_type();
+
 bool is_arithmetic_type(DataType t);
 bool is_integer_type(DataType t);
 bool is_floating_type(DataType t);

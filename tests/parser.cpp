@@ -85,9 +85,30 @@ void test4() {
   printf("test 4 passed\n\n");
 }
 
+void test5() {
+  printf("Running parser test 5...\n");
+
+  const char *source = "int x;";
+  Lexer lexer = new_lexer(source);
+  Scope scope;
+  scope.parent_scope = nullptr;
+
+  get_next_token(&lexer);
+  assert(get_current_token(&lexer)->type == TokenType::Int);
+
+  ASTNode *node = parse_declaration(&lexer, &scope);
+
+  assert(node);
+  assert(node->type == ASTNodeType::Declaration);
+  assert(node->object->name == "x");
+
+  printf("test 5 passed\n\n");
+}
+
 int main() {
   test1();
   test2();
   test3();
   test4();
+  test5();
 }

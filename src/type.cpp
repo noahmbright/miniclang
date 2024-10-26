@@ -5,7 +5,7 @@
 #include <cstdlib>
 
 static void set_declaration_flag(TypeModifierFlag flag,
-                                 Declaration *declaration) {
+                                 DeclarationSpecifierFlags *declaration) {
   declaration->flags |= flag;
 }
 
@@ -14,8 +14,9 @@ AbstractType *new_abstract_type() {
   return abstract_type;
 }
 
-static void handle_storage_class_specifier_flag(TypeModifierFlag flag,
-                                                Declaration *declaration) {
+static void
+handle_storage_class_specifier_flag(TypeModifierFlag flag,
+                                    DeclarationSpecifierFlags *declaration) {
   // At most, one storage-class specifier may be given in the declaration
   // specifiers in a  declaration, except that _Thread_local may appear with
   // static or extern.
@@ -51,8 +52,9 @@ static void handle_storage_class_specifier_flag(TypeModifierFlag flag,
   set_declaration_flag(flag, declaration);
 }
 
-static void check_flag_set_and_update_if_not(TypeModifierFlag flag,
-                                             Declaration *declaration) {
+static void
+check_flag_set_and_update_if_not(TypeModifierFlag flag,
+                                 DeclarationSpecifierFlags *declaration) {
   if (declaration->flags & flag) {
     fprintf(stderr, "repeating type specifier");
     return;
@@ -61,7 +63,7 @@ static void check_flag_set_and_update_if_not(TypeModifierFlag flag,
   set_declaration_flag(flag, declaration);
 }
 
-static void handle_align_as(Declaration *declaration) {
+static void handle_align_as(DeclarationSpecifierFlags *declaration) {
   // An alignment attribute shall not be specified in a declaration of a
   // typedef, or a bit-field, or a function, or a parameter, or an object
   // declared with the register storage-class specifier.
@@ -73,7 +75,7 @@ static void handle_align_as(Declaration *declaration) {
 }
 
 void update_declaration_specifiers(const Token *token,
-                                   Declaration *declaration) {
+                                   DeclarationSpecifierFlags *declaration) {
   // TODO: handle static_assert
   switch (token->type) {
 
@@ -186,14 +188,14 @@ void update_declaration_specifiers(const Token *token,
   }
 }
 
-DataType type_kind_from_declaration(Declaration *declaration) {
+DataType type_kind_from_declaration(DeclarationSpecifierFlags *declaration) {
   // following ChibiCC's approach for handling the multiset
   // specification for type specifiers
   // augmenting by adding that e.g. long long long has too many longs
 
   // the first 13 types in TypeSpecifierFlag enum are type specifiers
-  // 13 in hex is 0xd
-  int declaration_type_as_int = declaration->flags & 0xd;
+  // 13 consecutive 1s in hex is 0x1fff
+  int declaration_type_as_int = declaration->flags & 0xfff;
 
   switch (declaration_type_as_int) {
   case 0:
@@ -203,71 +205,72 @@ DataType type_kind_from_declaration(Declaration *declaration) {
   case TypeModifierFlag::Void:
     return DataType::Void;
 
+    // fixme?
   case TypeModifierFlag::Char:
   case TypeModifierFlag::Signed + TypeModifierFlag::Char:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Char:
-    return DataType::Void;
+    return DataType::Char;
 
   case TypeModifierFlag::Short:
   case TypeModifierFlag::Short + TypeModifierFlag::Signed:
   case TypeModifierFlag::Short + TypeModifierFlag::Int:
   case TypeModifierFlag::Signed + TypeModifierFlag::Short +
       TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::Short;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Short:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Short +
       TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::UnsignedShort;
 
   case TypeModifierFlag::Int:
   case TypeModifierFlag::Signed:
   case TypeModifierFlag::Signed + TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::Int;
 
   case TypeModifierFlag::Unsigned:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::UnsignedInt;
 
   case TypeModifierFlag::Long:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Int:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long +
       TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::Long;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Long:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Long +
       TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::UnsignedLong;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Long:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long +
       TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Long + TypeModifierFlag::Int:
-    return DataType::Void;
+    return DataType::LongLong;
 
   case TypeModifierFlag::Float:
-    return DataType::Void;
+    return DataType::Float;
 
   case TypeModifierFlag::Double:
-    return DataType::Void;
+    return DataType::Double;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Double:
-    return DataType::Void;
+    return DataType::LongDouble;
 
   case TypeModifierFlag::Bool:
-    return DataType::Void;
+    return DataType::Bool;
 
   case TypeModifierFlag::Float + TypeModifierFlag::Complex:
-    return DataType::Void;
+    return DataType::FloatComplex;
 
   case TypeModifierFlag::Double + TypeModifierFlag::Complex:
-    return DataType::Void;
+    return DataType::DoubleComplex;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Double +
       TypeModifierFlag::Complex:
-    return DataType::Void;
+    return DataType::LongDoubleComplex;
   }
   assert(false && "TypeKind from declaration UNREACHABLE");
 }

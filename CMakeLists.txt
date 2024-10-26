@@ -17,7 +17,8 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 file(GLOB_RECURSE SOURCE_FILES 
 	${CMAKE_SOURCE_DIR}/src/lexer.cpp
-	${CMAKE_SOURCE_DIR}/src/parser.cpp
+	${CMAKE_SOURCE_DIR}/src/parse_expressions.cpp
+	${CMAKE_SOURCE_DIR}/src/parse_declarations.cpp
 	${CMAKE_SOURCE_DIR}/src/type.cpp
 )
 
