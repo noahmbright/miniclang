@@ -101,8 +101,31 @@ void test5() {
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
   assert(node->object->name == "x");
+  assert(get_current_token(&lexer)->type == TokenType::Eof);
 
   printf("test 5 passed\n\n");
+}
+
+void test6() {
+  printf("Running parser test 6...\n");
+
+  const char *source = "int x = 5;";
+  Lexer lexer = new_lexer(source);
+  Scope scope;
+  scope.parent_scope = nullptr;
+
+  get_next_token(&lexer);
+  assert(get_current_token(&lexer)->type == TokenType::Int);
+
+  ASTNode *node = parse_declaration(&lexer, &scope);
+
+  assert(node);
+  assert(node->type == ASTNodeType::Declaration);
+  assert(node->object->name == "x");
+  assert(get_current_token(&lexer)->type == TokenType::Eof);
+
+  fprintf(stderr, "FIXME: Parse initializers, data structure for initializers");
+  // printf("test 6 passed\n\n");
 }
 
 int main() {
@@ -111,4 +134,5 @@ int main() {
   test3();
   test4();
   test5();
+  test6();
 }

@@ -357,24 +357,21 @@ ASTNode *parse_multiplicative_expression(Lexer *lexer) {
     switch (current_token->type) {
       // hit *, now the root should be the multiplication operation
     case TokenType::Asterisk:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Multiplication, root,
                                         parse_cast_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::ForwardSlash:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Division, root,
                                         parse_cast_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::Modulo:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Modulo, root,
                                         parse_cast_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     default:
@@ -382,7 +379,6 @@ ASTNode *parse_multiplicative_expression(Lexer *lexer) {
     }
   }
 
-  // get_next_token(lexer);
   return root;
 }
 
@@ -399,17 +395,15 @@ ASTNode *parse_additive_expression(Lexer *lexer) {
 
     switch (current_token->type) {
     case TokenType::Plus:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Addition, root,
                                         parse_multiplicative_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::Minus:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Subtraction, root,
                                         parse_multiplicative_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     default:
@@ -431,17 +425,15 @@ ASTNode *parse_shift_expression(Lexer *lexer) {
          current_token->type == TokenType::BitShiftRight) {
     switch (current_token->type) {
     case TokenType::BitShiftLeft:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
                                         parse_additive_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::BitShiftRight:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
                                         parse_additive_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     default:
@@ -467,28 +459,25 @@ ASTNode *parse_relational_expression(Lexer *lexer) {
     switch (current_token->type) {
 
     case TokenType::LessThan:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::LessThan, root,
                                         parse_shift_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::LessThanOrEqualTo:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::LessThanOrEqualTo, root,
                                         parse_shift_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::GreaterThan:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::GreaterThan, root,
                                         parse_shift_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::GreaterThanOrEqualTo:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::GreaterThanOrEqualTo, root,
                                         parse_shift_expression(lexer));
 
@@ -516,14 +505,12 @@ ASTNode *parse_equality_expression(Lexer *lexer) {
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
                                         parse_relational_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     case TokenType::BitShiftRight:
-      get_next_token(lexer);
+      current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
                                         parse_relational_expression(lexer));
-      current_token = get_current_token(lexer);
       break;
 
     default:
@@ -546,7 +533,6 @@ ASTNode *parse_bitwise_and_expression(Lexer *lexer) {
   // parse_equality_expression(lexer));
   //}
 
-  // get_next_token(lexer);
   return root;
 }
 
@@ -602,7 +588,7 @@ ASTNode *parse_logical_and_expression(Lexer *lexer) {
 ASTNode *parse_logical_or_expression(Lexer *lexer) {
   ASTNode *root = parse_logical_and_expression(lexer);
 
-  while (get_next_token(lexer)->type == TokenType::LogicalOr) {
+  while (get_current_token(lexer)->type == TokenType::LogicalOr) {
     get_next_token(lexer);
     root = new_binary_expression_node(ASTNodeType::LogicalOr, root,
                                       parse_logical_and_expression(lexer));

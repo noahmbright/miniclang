@@ -82,7 +82,6 @@ struct ASTNode {
 
 ASTNode *new_ast_node(ASTNodeType);
 bool expect_token_type(Token *, TokenType);
-Token expect_and_skip(Lexer *, Token, TokenType, const char *);
 
 // expressions
 ASTNode *parse_expression(Lexer *);
@@ -92,10 +91,12 @@ ASTNode *parse_assignment_expression(Lexer * /*, Scope *scope*/);
 // declarations
 ASTNode *parse_declaration(Lexer *, Scope *);
 void parse_direct_abstract_declarator(Lexer *);
-ASTNode *parse_initializer(Lexer *);
 Object *parse_declarator(Lexer *, DeclarationSpecifierFlags *);
 ASTNode *parse_init_declarator(Lexer *);
 AbstractType *parse_abstract_declarator(Lexer *);
 Object *parse_direct_declarator(Lexer *, Object * = nullptr,
                                 DeclarationSpecifierFlags * = nullptr);
 void parse_pointer(Lexer *);
+
+ASTNode *parse_initializer(Lexer *);
+ASTNode *parse_initializer_list(Lexer *);

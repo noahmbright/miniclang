@@ -51,9 +51,12 @@ Token recover_and_return_error_token(Lexer *lexer, Token error_token) {
 }
 
 void lexer_print_error_message(Lexer *lexer, const char *message) {
-  fprintf(stderr, "Error: %s Line %d:%d  :\n %s", lexer->current_filepath,
-          lexer->beginning_of_token_line, lexer->beginning_of_token_column,
-          message);
+  fprintf(stderr, "Error: %s Line %d:%d  :\n", lexer->current_filepath,
+          lexer->beginning_of_token_line, lexer->beginning_of_token_column);
+
+  fprintf(stderr, "%*s^\n", lexer->beginning_of_token_column + 7, "");
+
+  fprintf(stderr, "%s\n", message);
 }
 
 bool expect_token_type(Token *token, TokenType type) {

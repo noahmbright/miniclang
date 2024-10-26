@@ -149,7 +149,7 @@ DeclarationSpecifierFlags parse_declaration_specifiers(Lexer *lexer,
 // initialize the new objects that have been declarated
 //
 // an init-declarator-list is a list of init-declarators
-// e.g. int (x, y=5;), the init-declarator-list in parentheses
+// e.g. int x, y=5;, the init-declarator-list is x, y=5;
 //
 // declarators are separated by commas, so after the first one,
 // we need to expect and skip
@@ -165,6 +165,7 @@ ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
   ASTNode *ast_node = new_ast_node(ASTNodeType::Declaration);
   DeclarationSpecifierFlags declaration =
       parse_declaration_specifiers(lexer, scope);
+
   bool already_parsed_first_declarator = false;
 
   while (get_current_token(lexer)->type != TokenType::Semicolon) {
@@ -173,9 +174,14 @@ ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
       expect_and_get_next_token(
           lexer, TokenType::Comma,
           "Parsing declaration, expected comma or semicolon");
+
     already_parsed_first_declarator = true;
 
     ast_node->object = parse_declarator(lexer, &declaration);
+    if (get_current_token(lexer)->type == TokenType::Equals) {
+      get_next_token(lexer);
+      parse_initializer(lexer);
+    }
   }
 
   // skip semicolon
@@ -220,8 +226,6 @@ Object *parse_declarator(Lexer *lexer, DeclarationSpecifierFlags *declaration) {
     get_next_token(lexer);
     parse_pointer(lexer);
   }
-
-  // FIXME ??
 
   return parse_direct_declarator(lexer);
 }
@@ -317,6 +321,7 @@ Object *parse_direct_declarator(Lexer *lexer, Object *object,
                                 DeclarationSpecifierFlags *declaration) {
   const Token *current_token = get_current_token(lexer);
 
+  // FIXME:
   // parenthesis, parse another declarator
   if (current_token->type == TokenType::LParen) {
     get_next_token(lexer);
@@ -336,27 +341,19 @@ Object *parse_direct_declarator(Lexer *lexer, Object *object,
            "parse_direct_declarator: assigned null name string to new object");
 
     switch (get_next_token(lexer)->type) {
-      // hit a semicolon or comma, meaning either end of declaration or next
-      // declarator
-    case TokenType::Semicolon:
-    case TokenType::Comma:
-      assert(object && "parse_direct_declarator: returning null object");
-      return object;
 
-      // declaring an array
+      // FIXME:
     case TokenType::LBracket:
+      expect_and_get_next_token(lexer, TokenType::RBracket,
+                                "Expected RBracket in array declarator");
 
-      // declaring a function
+      // FIXME:
     case TokenType::LParen:
-      switch (get_next_token(lexer)->type) {
-      case TokenType::Identifier:
-      case TokenType::RParen:
-        return object;
-      default:
-      }
+      expect_and_get_next_token(lexer, TokenType::RParen,
+                                "Expected RParen in array declarator");
 
     default:
-      error_token(lexer, "FIXME: default case in parse_direct_declarator");
+      return object;
     }
   }
   assert(false);
@@ -430,19 +427,74 @@ AbstractType *parse_abstract_declarator(Lexer *lexer) {
 }
 
 // 6.7.9 Initialization
-void parse_initializer_list(Lexer *lexer) { (void)lexer; }
+//  initializers come from declaration = initializer
+//  so the 5 in x = 5, or the {1,2} in x[2] = {1,2}
 
 // initializer:
 //      assignment-expression
 //      { initializer-list }
 //      { initializer-list, }
 ASTNode *parse_initializer(Lexer *lexer) {
-  if (get_current_token(lexer)->type == TokenType::LBracket)
-    // FIXME:
+
+  // { initializer list }
+  if (get_current_token(lexer)->type == TokenType::LBracket) {
+    get_next_token(lexer);
     parse_initializer_list(lexer);
 
+    // skip potential comma
+    if (get_current_token(lexer)->type == TokenType::Comma)
+      get_next_token(lexer);
+
+    expect_and_get_next_token(
+        lexer, TokenType::RBracket,
+        "Expected RBracket after comma at end of initializer list\n");
+  }
+
+  // simple assignment expresion
   return parse_assignment_expression(lexer);
 }
+
+// initializer-list:
+//      designation(optional) initializer
+//      initializer-list, designation(optional) initializer
+//
+ASTNode *parse_initializer_list(Lexer *lexer) {
+
+  // FIXME: struct initializers
+  if (get_current_token(lexer)->type == TokenType::LBracket) {
+    expect_and_get_next_token(lexer, TokenType::RBracket,
+                              "Expected closing bracket in array designator");
+  }
+
+  // FIXME: array initializers
+  if (get_current_token(lexer)->type == TokenType::Dot) {
+    get_next_token(lexer);
+
+    if (get_current_token(lexer)->type != TokenType::Identifier)
+      error_token(lexer,
+                  "Expected identifer name after '.' in intializer list");
+
+    const std::string &identifier = get_current_token(lexer)->string;
+    (void)identifier;
+  }
+
+  return parse_initializer(lexer);
+}
+
+// designation:
+//      designator-list =
+
+// designator-list
+//      designator
+//      designator-list designator
+
+// designator
+//      [constant-expression]
+//      .identifier
+
+// [const-expr] is for array types,  any nonnegative values allowed if size
+// unspecified
+// .identifier is for struct/unions, the identifier better be a member
 
 void parse_file(const char *file) {
   Lexer lexer = new_lexer(file);
