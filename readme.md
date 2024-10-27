@@ -1,15 +1,87 @@
-#Miniclangpp
+# Miniclang
 
-An eduacational C compiler targeting LLVM. Written in C++, using a couple of
-it's niceties, i.e. a string and hash table implementation, along with enum
-classes. Resources used in learning how to write a C compiler are included in
-[references](#references), one of which is the LLVM Kaleidescope tutorial. 
-The syntactic sugar and closeness to the tutorial are what motivated the 
-choice, so alas, this compiler will not be able to compile itself. 
+An educational C compiler targeting LLVM. Written in C++, using a couple of
+it's niceties to allow for focus on compiler details. Miniclang will
+unfortunately not be able to compile itself in the near future.
 
-## Status
+Codegen is done by emitting llvm as text. Not entirely ergonomic but that
+decision was made to allow for learning LLVM and assembly-like programming
+as opposed to learning an LLVM API.
 
-Don't use this for anything. Not that it even works yet.
+LLVM IR is inherently SSA, so this allows for learning about that form
+and the optimzations it enables. 
+
+This readme is a living document essentially journalling what I've learned
+throughout the process of writing this compiler.
+
+# Stages of compilation
+
+## Lexing
+
+Lexing is done using a simple switch-driven lexer, very much inspired by 
+Crafting Interpreters. This is definitely the least interesting part of the 
+project.
+
+## Parsing
+
+Currently, the parser is split into two files, `parse_expressions.cpp` and
+`parse_declarations.cpp`. This is direct reflection of the C specification,
+sections 6.5 and 6.7. Expressions are where operator precedences are defined,
+and is the easiest section to map to academic resources on recursive descent
+parsing. This would be the best place to start in implementing a parser on 
+your own.
+
+Parsing declarations is more complicated. A declaration is something like `int
+x, y[] = {1,2,}`. This involves sorting out type information, propagating it
+forward appropriately, parsing initializers, and figuring out how to represent
+this all in an AST.
+
+Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
+what ends up going into the AST.
+
+## Codegen
+
+(Much of this initial understanding comes from [Mapping High Level Constructs
+to LLVM
+IR](https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/index.html)
+)
+
+### Variables
+
+In LLVM, global variables and function names are prefixed with `@`. The entry
+point into a program (i.e., the definition of the main function), will
+typically look like `define i32 @main()`.
+
+There are two types of local variables: temporaries and stack allocated. The
+former are results of simply defining new symbols; the latter are results of
+using the `alloca` instruction, which returns a pointer. Valid LLVM requires
+that local variables use unique names to adhere to SSA form.
+
+LLVM has the intrinsic `struct`, with fields mapping to 0-based indicies as
+opposed to names. Indexing into structs and arrays involves use of the 
+[`GetElementPtr` instruction](https://llvm.org/docs/GetElementPtr.html), deemed
+confusing enough to get its own post on the LLVM website.
+
+### Functions
+
+Function definitions and declarations in LLVM resemble those in C. A definition
+uses the `define` keyword, a comma-separated typed argument list, followed by
+the body of the function wrapped in curly braces. A declaration uses the
+`declare` keyword and a similar argument list - potentially with the variable
+names omitted - e.g., `declare i32 @func(i32, i32)`.
+
+### Branching and Phi functions
+
+LLVM IR implements control flow by jumping between basic blocks, often ending
+with `br` instructions, which can be either conditional or unconditional jumps.
+When a new basic block begins, if it has several potential predeccsor blocks, a
+`phi` function is used to collect the results of the predecessor that actually
+executed and store them where they need to go. Any `phi` functions in a basic
+block need to come before any non-`phi` functions.
+
+# Status
+
+Don't use this for anything. 
 
 TODOs:
 
@@ -18,7 +90,9 @@ allow for testing the parser with independent token streams
 
 * Decide on how/when to type check and type cast as we parse expressions
 
-## Goals and non-goals
+* Implement optimization passes 
+
+# Goals and non-goals
 
 Fundamentally a learning project, the goal is not to make a perfect spec
 compliant C compiler. A notable obstacle right now is the preprocessor, which
@@ -26,12 +100,15 @@ will get in the way of compiling realistic programs for the time being.
 Learning LLVM is a higher priority, so there will be more focus on the internal
 lower level details. Parsing C is enough of a front end challenge for now.
 
-C's dangerous features are used, i.e., raw pointers allocated via `malloc` and 
-unions. Following [chibicc](https://github.com/rui314/chibicc), there is not yet
-any freeing of allocated resources, which is forgivable for a short-lived program
-with high emphasis on speed.
+To me, the most interesting part of this project is the middle end. How C-level
+abstractions map to a lower-level IR, and how to perform optimizations on that
+IR make for exciting questions both in a mathematical and implementational
+sense.
 
-Testing infrastructure is homegrown. 
+A C-like coding style is used for the most part, up to and including and
+unions. Following [chibicc](https://github.com/rui314/chibicc), there is not
+yet any freeing of allocated resources, which is forgivable for a short-lived
+program with high emphasis on speed.
 
 It's a truism that global variables are bad practice, several of the resources
 used here repeat that. In an attempt to take that to heart, globals are replaced
@@ -41,42 +118,43 @@ additional clarity in function calls and forces some additional intentionality
 during programming, but it can also feel a bit repetitive. Benchmarking and comparing
 the cost of passing around all the pointers would also be insightful.
 
-## Building
+# Building
 
-Miniclangpp is a simple CMake project, so it should Just Work:tm: on most systems.
+Miniclang is a simple CMake project, so it should Just Work :tm: on most systems.
 
 To clone and build, run the following:
 
 ```
-git clone git@github.com:noahmbright/miniclangpp.git
-cd miniclangpp
+git clone git@github.com:noahmbright/miniclang.git
+cd miniclang
 cmake -S . -B build
 make -C build
 ```
 
-## Testing
+# Testing
 
 To run the (homegrown) test suite, run `./run_tests.sh` from the root of the
-source tree. If no arguments are passed, all tests are run. By default, for debug
-purposes, a CMake flag `TEST_VERBOSE` is set, which prints output to `stdout` as
-the test cases are run. To test individual elements of the compiler, the script
-can take a single command line argument. Currently accepted arguments are `lexer`.
+source tree. If no arguments are passed, all tests are run. By default, for
+debug purposes, a CMake flag `TEST_VERBOSE` is set, which prints output to
+`stdout` as the test cases are run. To test individual elements of the
+compiler, the script can take a single command line argument. Currently
+accepted arguments are `lexer`, `parser`.
 
 `run_tests.sh` expects to find the test executables in a `build` directory. Please
 adhere to the instructions in [building](#building) if you'd like the tests to 
 just work.
 
-## References
+# References
 
-The [C11 spec](https://www.open-std.org/jtc1/sc22/WG14/www/docs/n1570.pdf). The
+* The [C11 spec](https://www.open-std.org/jtc1/sc22/WG14/www/docs/n1570.pdf). The
 canonical source of truth. 
 
-Rui Ueyama's [chibicc](https://github.com/rui314/chibicc). Particularly useful
+* Rui Ueyama's [chibicc](https://github.com/rui314/chibicc). Particularly useful
 for the parser and seeing how to turn the spec's left recursive madness into
 something reasonable. Also very helpful in getting inspiration for representing
 C's type system.
 
-Robert Nystrom's [Crafting
+* Robert Nystrom's [Crafting
 Interpreters](https://www.craftinginterpreters.com/). A good introduction and a
 good resource for a second opinion. The intro knowledge is good for
 demystifying and making compilers approachable, and it's goal is sufficiently
@@ -84,7 +162,5 @@ different from a C compiler that you need to make leaps between what you're
 doing and what he shows, which is a good exercise. Credit for giving me the
 courage to use unions. 
 
-Special credit to:
-* Chapter 6 on recursive descent for helping transform the C
-specification's left recursive grammar. 
-* Chapter 16 on the lexer in C, even though I cheated and used `std::string`
+* [Mapping High Level Constructs to LLVM
+  IR](https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/index.html)

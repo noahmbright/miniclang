@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-project(miniclangpp)
+project(miniclang)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 23)
@@ -27,11 +27,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_compile_definitions(TEST_VERBOSE)
 add_compile_options(-Wall -Wextra -pedantic -Werror -Fsanitize=address)
 
-add_library(miniclangpp_lib ${SOURCE_FILES})
-target_link_libraries(miniclangpp_lib ${llvm_libs})
-link_libraries(miniclangpp_lib)
+add_library(miniclang_lib ${SOURCE_FILES})
+target_link_libraries(miniclang_lib ${llvm_libs})
+link_libraries(miniclang_lib)
 
-add_executable(miniclangpp ${CMAKE_SOURCE_DIR}/src/main.cpp)
+add_executable(miniclang ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
 add_executable(lexer_test ${CMAKE_SOURCE_DIR}/tests/lexer.cpp)
 add_executable(parser_test ${CMAKE_SOURCE_DIR}/tests/parser.cpp)

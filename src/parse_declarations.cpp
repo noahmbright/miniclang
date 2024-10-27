@@ -235,7 +235,7 @@ static void parse_type_qualifier_list(Lexer *lexer) {
   const Token *current_token = get_current_token(lexer);
 
   DeclarationSpecifierFlags declaration;
-  // potential FIXME: pass around Declarations from the right places
+
   while (token_is_type_qualifier(current_token)) {
     update_declaration_specifiers(current_token, &declaration);
     current_token = get_next_token(lexer);
@@ -327,7 +327,7 @@ Object *parse_direct_declarator(Lexer *lexer, Object *object,
     get_next_token(lexer);
     parse_declarator(lexer, declaration);
     current_token = expect_and_get_next_token(
-        lexer, TokenType::RParen, "parse_direct_declarator expected RParen");
+        lexer, TokenType::RParen, "Expected RParen around declarator");
   }
 
   // start of parsing a new declarator with name identifier's-name
