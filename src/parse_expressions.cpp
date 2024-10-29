@@ -635,11 +635,13 @@ ASTNode *parse_conditional_expression(Lexer *lexer) {
 //      unary-expression assignment-operator assignment-expression
 static bool is_assignment_operator(Token *token) {
   TokenType t = token->type;
-  using enum TokenType;
-  return (t == Equals || t == TimesEquals || t == DividedByEquals ||
-          t == ModuloEquals || t == PlusEquals || t == MinusEquals ||
-          t == BitShiftLeftEquals || t == BitShiftRightEquals ||
-          t == BitwiseAndEquals || t == XorEquals || t == BitwiseOrEquals);
+  return (t == TokenType::Equals || t == TokenType::TimesEquals ||
+          t == TokenType::DividedByEquals || t == TokenType::ModuloEquals ||
+          t == TokenType::PlusEquals || t == TokenType::MinusEquals ||
+          t == TokenType::BitShiftLeftEquals ||
+          t == TokenType::BitShiftRightEquals ||
+          t == TokenType::BitwiseAndEquals || t == TokenType::XorEquals ||
+          t == TokenType::BitwiseOrEquals);
 }
 
 ASTNode *parse_assignment_expression(Lexer *lexer) {

@@ -135,7 +135,7 @@ static bool token_is_type_specifier(const Token *token, Scope *scope) {
   }
 }
 
-static bool token_is_declaration_specifier(const Token *token, Scope *scope) {
+bool token_is_declaration_specifier(const Token *token, Scope *scope) {
   return token_is_storage_class_specifier(token) ||
          token_is_type_specifier(token, scope) ||
          token_is_type_qualifier(token) || token_is_function_specifier(token) ||
@@ -578,40 +578,3 @@ ASTNode *parse_initializer_list(Lexer *lexer) {
 // [const-expr] is for array types,  any nonnegative values allowed if size
 // unspecified
 // .identifier is for struct/unions, the identifier better be a member
-
-void parse_file(const char *file) {
-  Lexer lexer = new_lexer(file);
-  Scope current_scope;
-
-  for (const Token *current_token = get_next_token(&lexer);
-       current_token->type != TokenType::Eof;
-       current_token = get_next_token(&lexer)) {
-
-    if (token_is_declaration_specifier(current_token, &current_scope)) {
-      parse_declaration(&lexer, &current_scope);
-    }
-  }
-}
-
-// 6.8 Statements
-//      labeled statement
-//      compound statement
-//      expression statement
-//      selection statement
-//      iteration statement
-//      jump statement
-
-// labeled statements are
-//      identifier : statement for use with goto
-//  or case const-expression : statement/ default :statement for switches
-
-// compound statement are blocks of declarations and other statements wrapped in
-// {}, for use in basically everything, e.g. for loops
-
-// expression statements are expr(opt);
-
-// selection statements are ifs/switches
-
-// iteration statements are (do) while and for
-
-// jumps are goto identifier; continue; break; return;

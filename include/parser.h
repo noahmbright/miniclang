@@ -89,6 +89,7 @@ ASTNode *parse_primary_expression(Lexer * /*, Scope *scope*/);
 ASTNode *parse_assignment_expression(Lexer * /*, Scope *scope*/);
 
 // declarations
+bool token_is_declaration_specifier(const Token *, Scope *);
 ASTNode *parse_declaration(Lexer *, Scope *);
 const Object *parse_declarator(Lexer *, const Type *, Scope *);
 ASTNode *parse_init_declarator(Lexer *);
@@ -96,3 +97,6 @@ const Type *parse_pointer(Lexer *, const Type *);
 
 ASTNode *parse_initializer(Lexer *);
 ASTNode *parse_initializer_list(Lexer *);
+
+// statements
+ASTNode *parse_statement(Lexer *lexer, Scope *scope);

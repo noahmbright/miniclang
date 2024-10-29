@@ -169,7 +169,32 @@ void test8() {
 
   ASTNode *node = parse_declaration(&lexer, &scope);
 
-  // type should be pointer to int
+  assert(node);
+  assert(node->type == ASTNodeType::Declaration);
+  assert(node->object->identifier == "x");
+
+  assert(node->object->type->function_data->return_type ==
+         get_fundamental_type_pointer(FundamentalType::Int));
+  assert(node->object->type->function_data->parameter_list == nullptr);
+  assert(node->object->type->fundamental_type == FundamentalType::Function);
+
+  assert(get_current_token(&lexer)->type == TokenType::Eof);
+
+  printf("test 8 passed\n\n");
+}
+
+void test9() {
+  printf("Running parser test 9: Compound statement...\n");
+
+  const char *source = "{int x();\nchar* s;}";
+  Lexer lexer = new_lexer(source);
+  Scope scope;
+  scope.parent_scope = nullptr;
+
+  get_next_token(&lexer);
+
+  ASTNode *node = parse_statement(&lexer, &scope);
+
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
   assert(node->object->identifier == "x");
@@ -178,9 +203,16 @@ void test8() {
          get_fundamental_type_pointer(FundamentalType::Int));
   assert(node->object->type->function_data->parameter_list == nullptr);
 
+  ASTNode *next_node = node->next;
+  assert(next_node);
+  assert(next_node->object->identifier == "s");
+  assert(next_node->object->type->pointed_type ==
+         get_fundamental_type_pointer(FundamentalType::Char));
+  assert(next_node->object->type->fundamental_type == FundamentalType::Pointer);
+
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
-  printf("test 8 passed\n\n");
+  printf("test 9 passed\n\n");
 }
 
 int main() {
@@ -192,4 +224,5 @@ int main() {
   test6();
   test7();
   test8();
+  test9();
 }

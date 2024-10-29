@@ -24,12 +24,15 @@ project.
 
 ## Parsing
 
-Currently, the parser is split into two files, `parse_expressions.cpp` and
-`parse_declarations.cpp`. This is direct reflection of the C specification,
-sections 6.5 and 6.7. Expressions are where operator precedences are defined,
-and is the easiest section to map to academic resources on recursive descent
-parsing. This would be the best place to start in implementing a parser on 
-your own.
+The parser is split into three files, `parse_expressions.cpp` and
+`parse_declarations.cpp`, and `parse_statements.cpp`. This is direct reflection
+of the C specification, sections 6.5, 6.7, and 6.8. Expressions are where
+operator precedences are defined, and is the easiest section to map to academic
+resources on recursive descent parsing. This would be the best place to start
+in implementing a parser on your own. Parsing statements is relatively simple
+given other parts of the parser - this is where block statements (several
+statements wrapped in {}), and control flow are defined. Additionally, the 
+function for parsing an entire file is defined here.
 
 Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
 what ends up going into the AST.
