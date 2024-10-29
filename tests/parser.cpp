@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "lexer.h"
+#include "type.h"
 #include <cassert>
 
 void test1() {
@@ -100,7 +101,8 @@ void test5() {
 
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
-  assert(node->object->name == "x");
+  printf("%s\n", node->object->identifier.c_str());
+  assert(node->object->identifier == "x");
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
   printf("test 5 passed\n\n");
@@ -121,11 +123,63 @@ void test6() {
 
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
-  assert(node->object->name == "x");
+  assert(node->object->identifier == "x");
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
-  fprintf(stderr, "FIXME: Parse initializers, data structure for initializers");
+  fprintf(stderr,
+          "FIXME: Parse initializers, data structure for initializers\n\n");
   // printf("test 6 passed\n\n");
+}
+
+void test7() {
+  printf("Running parser test 7...\n");
+
+  const char *source = "int *x;";
+  Lexer lexer = new_lexer(source);
+  Scope scope;
+  scope.parent_scope = nullptr;
+
+  get_next_token(&lexer);
+  assert(get_current_token(&lexer)->type == TokenType::Int);
+
+  ASTNode *node = parse_declaration(&lexer, &scope);
+
+  // type should be pointer to int
+  assert(node);
+  assert(node->type == ASTNodeType::Declaration);
+  assert(node->object->identifier == "x");
+  assert(get_current_token(&lexer)->type == TokenType::Eof);
+
+  fprintf(stderr,
+          "FIXME: Parse initializers, data structure for initializers\n\n");
+  // printf("test 7 passed\n\n");
+}
+
+void test8() {
+  printf("Running parser test 8...\n");
+
+  const char *source = "int x();";
+  Lexer lexer = new_lexer(source);
+  Scope scope;
+  scope.parent_scope = nullptr;
+
+  get_next_token(&lexer);
+  assert(get_current_token(&lexer)->type == TokenType::Int);
+
+  ASTNode *node = parse_declaration(&lexer, &scope);
+
+  // type should be pointer to int
+  assert(node);
+  assert(node->type == ASTNodeType::Declaration);
+  assert(node->object->identifier == "x");
+
+  assert(node->object->type->function_data->return_type ==
+         get_fundamental_type_pointer(FundamentalType::Int));
+  assert(node->object->type->function_data->parameter_list == nullptr);
+
+  assert(get_current_token(&lexer)->type == TokenType::Eof);
+
+  printf("test 8 passed\n\n");
 }
 
 int main() {
@@ -135,4 +189,6 @@ int main() {
   test4();
   test5();
   test6();
+  // test7();
+  test8();
 }

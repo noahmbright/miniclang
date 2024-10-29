@@ -9,9 +9,18 @@ static void set_declaration_flag(TypeModifierFlag flag,
   declaration->flags |= flag;
 }
 
-AbstractType *new_abstract_type() {
-  AbstractType *abstract_type = (AbstractType *)malloc(sizeof(AbstractType));
-  return abstract_type;
+Type *new_type(FundamentalType fundamental_type, Type *pointed_type) {
+  Type *new_type = (Type *)malloc(sizeof(Type));
+
+  new_type->function_data = nullptr;
+  new_type->pointed_type = pointed_type;
+  new_type->fundamental_type = fundamental_type;
+  new_type->declaration_specifier_flags.flags = 0;
+
+  assert(fundamental_type == FundamentalType::Pointer && pointed_type ||
+         fundamental_type != FundamentalType::Pointer && !pointed_type);
+
+  return new_type;
 }
 
 static void
@@ -188,7 +197,8 @@ void update_declaration_specifiers(const Token *token,
   }
 }
 
-DataType type_kind_from_declaration(DeclarationSpecifierFlags *declaration) {
+FundamentalType
+fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration) {
   // following ChibiCC's approach for handling the multiset
   // specification for type specifiers
   // augmenting by adding that e.g. long long long has too many longs
@@ -203,91 +213,91 @@ DataType type_kind_from_declaration(DeclarationSpecifierFlags *declaration) {
     break;
 
   case TypeModifierFlag::Void:
-    return DataType::Void;
+    return FundamentalType::Void;
 
     // fixme?
   case TypeModifierFlag::Char:
   case TypeModifierFlag::Signed + TypeModifierFlag::Char:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Char:
-    return DataType::Char;
+    return FundamentalType::Char;
 
   case TypeModifierFlag::Short:
   case TypeModifierFlag::Short + TypeModifierFlag::Signed:
   case TypeModifierFlag::Short + TypeModifierFlag::Int:
   case TypeModifierFlag::Signed + TypeModifierFlag::Short +
       TypeModifierFlag::Int:
-    return DataType::Short;
+    return FundamentalType::Short;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Short:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Short +
       TypeModifierFlag::Int:
-    return DataType::UnsignedShort;
+    return FundamentalType::UnsignedShort;
 
   case TypeModifierFlag::Int:
   case TypeModifierFlag::Signed:
   case TypeModifierFlag::Signed + TypeModifierFlag::Int:
-    return DataType::Int;
+    return FundamentalType::Int;
 
   case TypeModifierFlag::Unsigned:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Int:
-    return DataType::UnsignedInt;
+    return FundamentalType::UnsignedInt;
 
   case TypeModifierFlag::Long:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Int:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long +
       TypeModifierFlag::Int:
-    return DataType::Long;
+    return FundamentalType::Long;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Long:
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Long +
       TypeModifierFlag::Int:
-    return DataType::UnsignedLong;
+    return FundamentalType::UnsignedLong;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Long:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long +
       TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Long + TypeModifierFlag::Int:
-    return DataType::LongLong;
+    return FundamentalType::LongLong;
 
   case TypeModifierFlag::Float:
-    return DataType::Float;
+    return FundamentalType::Float;
 
   case TypeModifierFlag::Double:
-    return DataType::Double;
+    return FundamentalType::Double;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Double:
-    return DataType::LongDouble;
+    return FundamentalType::LongDouble;
 
   case TypeModifierFlag::Bool:
-    return DataType::Bool;
+    return FundamentalType::Bool;
 
   case TypeModifierFlag::Float + TypeModifierFlag::Complex:
-    return DataType::FloatComplex;
+    return FundamentalType::FloatComplex;
 
   case TypeModifierFlag::Double + TypeModifierFlag::Complex:
-    return DataType::DoubleComplex;
+    return FundamentalType::DoubleComplex;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Double +
       TypeModifierFlag::Complex:
-    return DataType::LongDoubleComplex;
+    return FundamentalType::LongDoubleComplex;
   }
   assert(false && "TypeKind from declaration UNREACHABLE");
 }
 
-bool is_integer_type(DataType t) {
+bool is_integer_type(FundamentalType t) {
   switch (t) {
-  case DataType::SignedChar:
-  case DataType::Char:
-  case DataType::Int:
-  case DataType::UnsignedInt:
-  case DataType::Long:
-  case DataType::UnsignedLong:
-  case DataType::LongLong:
-  case DataType::UnsignedLongLong:
-  case DataType::Short:
-  case DataType::UnsignedShort:
-  case DataType::EnumeratedValue:
+  case FundamentalType::SignedChar:
+  case FundamentalType::Char:
+  case FundamentalType::Int:
+  case FundamentalType::UnsignedInt:
+  case FundamentalType::Long:
+  case FundamentalType::UnsignedLong:
+  case FundamentalType::LongLong:
+  case FundamentalType::UnsignedLongLong:
+  case FundamentalType::Short:
+  case FundamentalType::UnsignedShort:
+  case FundamentalType::EnumeratedValue:
     return true;
 
   default:
@@ -295,11 +305,11 @@ bool is_integer_type(DataType t) {
   }
 }
 
-bool is_floating_type(DataType t) {
+bool is_floating_type(FundamentalType t) {
   switch (t) {
-  case DataType::Float:
-  case DataType::Double:
-  case DataType::LongDouble:
+  case FundamentalType::Float:
+  case FundamentalType::Double:
+  case FundamentalType::LongDouble:
     return true;
 
   default:
@@ -307,6 +317,98 @@ bool is_floating_type(DataType t) {
   }
 }
 
-bool is_arithmetic_type(DataType t) {
+bool is_arithmetic_type(FundamentalType t) {
   return is_integer_type(t) || is_floating_type(t);
+}
+
+extern const Type *const VoidType = new_type(FundamentalType::Void);
+extern const Type *const CharType = new_type(FundamentalType::Char);
+extern const Type *const SignedCharType = new_type(FundamentalType::SignedChar);
+extern const Type *const UnsignedCharType =
+    new_type(FundamentalType::UnsignedChar);
+extern const Type *const ShortType = new_type(FundamentalType::Short);
+extern const Type *const UnsignedShortType =
+    new_type(FundamentalType::UnsignedShort);
+extern const Type *const IntType = new_type(FundamentalType::Int);
+extern const Type *const UnsignedIntType =
+    new_type(FundamentalType::UnsignedInt);
+extern const Type *const LongType = new_type(FundamentalType::Long);
+extern const Type *const UnsignedLongType =
+    new_type(FundamentalType::UnsignedLong);
+extern const Type *const LongLongType = new_type(FundamentalType::LongLong);
+extern const Type *const UnsignedLongLongType =
+    new_type(FundamentalType::UnsignedLongLong);
+extern const Type *const FloatType = new_type(FundamentalType::Float);
+extern const Type *const DoubleType = new_type(FundamentalType::Double);
+extern const Type *const LongDoubleType = new_type(FundamentalType::LongDouble);
+extern const Type *const FloatComplexType =
+    new_type(FundamentalType::FloatComplex);
+extern const Type *const DoubleComplexType =
+    new_type(FundamentalType::DoubleComplex);
+extern const Type *const LongDoubleComplexType =
+    new_type(FundamentalType::LongDoubleComplex);
+extern const Type *const BoolType = new_type(FundamentalType::Bool);
+extern const Type *const StructType = new_type(FundamentalType::Struct);
+extern const Type *const UnionType = new_type(FundamentalType::Union);
+extern const Type *const EnumType = new_type(FundamentalType::Enum);
+extern const Type *const EnumeratedValueType =
+    new_type(FundamentalType::EnumeratedValue);
+extern const Type *const TypedefNameType =
+    new_type(FundamentalType::TypedefName);
+
+const Type *get_fundamental_type_pointer(FundamentalType type) {
+  switch (type) {
+  case FundamentalType::Void:
+    return VoidType;
+  case FundamentalType::Char:
+    return CharType;
+  case FundamentalType::SignedChar:
+    return SignedCharType;
+  case FundamentalType::UnsignedChar:
+    return UnsignedCharType;
+  case FundamentalType::Short:
+    return ShortType;
+  case FundamentalType::UnsignedShort:
+    return UnsignedShortType;
+  case FundamentalType::Int:
+    return IntType;
+  case FundamentalType::UnsignedInt:
+    return UnsignedIntType;
+  case FundamentalType::Long:
+    return LongType;
+  case FundamentalType::UnsignedLong:
+    return UnsignedLongType;
+  case FundamentalType::LongLong:
+    return LongLongType;
+  case FundamentalType::UnsignedLongLong:
+    return UnsignedLongLongType;
+  case FundamentalType::Float:
+    return FloatType;
+  case FundamentalType::Double:
+    return DoubleType;
+  case FundamentalType::LongDouble:
+    return LongDoubleType;
+  case FundamentalType::FloatComplex:
+    return FloatComplexType;
+  case FundamentalType::DoubleComplex:
+    return DoubleComplexType;
+  case FundamentalType::LongDoubleComplex:
+    return LongDoubleComplexType;
+  case FundamentalType::Bool:
+    return BoolType;
+  case FundamentalType::Struct:
+    return StructType;
+  case FundamentalType::Union:
+    return UnionType;
+  case FundamentalType::Enum:
+    return EnumType;
+  case FundamentalType::EnumeratedValue:
+    return EnumeratedValueType;
+  case FundamentalType::TypedefName:
+    return TypedefNameType;
+  case FundamentalType::Pointer:
+  case FundamentalType::Function:
+    assert(false);
+    return nullptr;
+  }
 }

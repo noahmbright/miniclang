@@ -9,35 +9,22 @@ struct Identifier {
   std::string name;
 };
 
-struct FunctionType {
-  Identifier *parameter;
+struct FunctionParameter {
+  const Type *parameter_type;
+  FunctionParameter *next_parameter;
+};
+
+struct FunctionData {
+  const Type *return_type;
+  const FunctionParameter *parameter_list;
   bool is_variadic;
-};
-
-struct ArrayType {
-  Type *base;
-};
-
-struct PointerType {
-  Type *base;
 };
 
 struct DeclarationSpecifierFlags {
   int flags;
 };
 
-struct AbstractType {
-
-  union {
-    FunctionType function_type;
-    PointerType pointer_type;
-    ArrayType array_type;
-  } as;
-
-  AbstractType *abstract_type;
-};
-
-enum class DataType {
+enum class FundamentalType {
   Void,
   Char,
   SignedChar,
@@ -61,29 +48,50 @@ enum class DataType {
   Union,
   Enum,
   EnumeratedValue,
-  TypedefName
+  TypedefName,
+  Pointer,
+  Function
 };
+
+extern const Type *const VoidType;
+extern const Type *const CharType;
+extern const Type *const SignedCharType;
+extern const Type *const UnsignedCharType;
+extern const Type *const ShortType;
+extern const Type *const UnsignedShortType;
+extern const Type *const IntType;
+extern const Type *const UnsignedIntType;
+extern const Type *const LongType;
+extern const Type *const UnsignedLongType;
+extern const Type *const LongLongType;
+extern const Type *const UnsignedLongLongType;
+extern const Type *const FloatType;
+extern const Type *const DoubleType;
+extern const Type *const LongDoubleType;
+extern const Type *const FloatComplexType;
+extern const Type *const DoubleComplexType;
+extern const Type *const LongDoubleComplexType;
+extern const Type *const BoolType;
+extern const Type *const StructType;
+extern const Type *const UnionType;
+extern const Type *const EnumType;
+extern const Type *const EnumeratedValueType;
+extern const Type *const TypedefNameType;
 
 // a type name is a list of type specifiers/qualifiers and an optional abstract
 // declarator
 // i.e., a const *[]
 struct Type {
-  DataType kind;
-  bool is_atomic;
-  AbstractType *abstract_type;
+  const FunctionData *function_data;
+  const Type *pointed_type;
+  FundamentalType fundamental_type;
+  DeclarationSpecifierFlags declaration_specifier_flags;
 };
-
-struct Function {};
-
-struct Variable {};
 
 // functions or variables
 struct Object {
-  std::string name;
-  union {
-    Variable variable;
-    Function function;
-  } as;
+  std::string identifier;
+  const Type *type;
 };
 
 enum TypeModifierFlag {
@@ -128,10 +136,13 @@ enum TypeModifierFlag {
 };
 
 void update_declaration_specifiers(const Token *, DeclarationSpecifierFlags *);
-DataType type_kind_from_declaration(DeclarationSpecifierFlags *declaration);
+FundamentalType
+fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration);
 
-AbstractType *new_abstract_type();
+Type *new_type(FundamentalType, Type * = nullptr);
+Type *fundamental_type(FundamentalType);
 
-bool is_arithmetic_type(DataType t);
-bool is_integer_type(DataType t);
-bool is_floating_type(DataType t);
+bool is_arithmetic_type(FundamentalType t);
+bool is_integer_type(FundamentalType t);
+bool is_floating_type(FundamentalType t);
+const Type *get_fundamental_type_pointer(FundamentalType);

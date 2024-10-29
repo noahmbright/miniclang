@@ -50,7 +50,7 @@ enum class ASTNodeType {
 struct ASTNode {
   ASTNodeType type;
 
-  DataType data_type;
+  FundamentalType data_type;
 
   union {
     char char_data;
@@ -77,7 +77,7 @@ struct ASTNode {
   ASTNode *conditional;
 
   // declarations/definitions
-  Object *object;
+  const Object *object;
 };
 
 ASTNode *new_ast_node(ASTNodeType);
@@ -90,13 +90,9 @@ ASTNode *parse_assignment_expression(Lexer * /*, Scope *scope*/);
 
 // declarations
 ASTNode *parse_declaration(Lexer *, Scope *);
-void parse_direct_abstract_declarator(Lexer *);
-Object *parse_declarator(Lexer *, DeclarationSpecifierFlags *);
+const Object *parse_declarator(Lexer *, const Type *, Scope *);
 ASTNode *parse_init_declarator(Lexer *);
-AbstractType *parse_abstract_declarator(Lexer *);
-Object *parse_direct_declarator(Lexer *, Object * = nullptr,
-                                DeclarationSpecifierFlags * = nullptr);
-void parse_pointer(Lexer *);
+const Type *parse_pointer(Lexer *, const Type *);
 
 ASTNode *parse_initializer(Lexer *);
 ASTNode *parse_initializer_list(Lexer *);

@@ -31,13 +31,25 @@ and is the easiest section to map to academic resources on recursive descent
 parsing. This would be the best place to start in implementing a parser on 
 your own.
 
+Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
+what ends up going into the AST.
+
+### Parsing declarations
+
 Parsing declarations is more complicated. A declaration is something like `int
 x, y[] = {1,2,}`. This involves sorting out type information, propagating it
 forward appropriately, parsing initializers, and figuring out how to represent
 this all in an AST.
 
-Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
-what ends up going into the AST.
+### Parsing Types
+
+C is statically typed, meaning that our AST needs a way to represent data types
+for use during static analysis. There are fundamental types such as `int` and 
+`char`, but also pointer, function, array, and user defined types. Pointers point
+to particular types, and pointers can point to pointers, so these are defined 
+using linked lists to allow for sufficiently generic typing. A function pointer
+type is defined by its return type and parameter list types, e.g. you can have
+a pointer to a function that takes a `char` and returns an `int`.
 
 ## Codegen
 
@@ -164,3 +176,5 @@ courage to use unions.
 
 * [Mapping High Level Constructs to LLVM
   IR](https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/index.html)
+
+* [Matt Godbolt's Compiler Explorer](https://godbolt.org/). Turn on the `-emit-llvm` flag.

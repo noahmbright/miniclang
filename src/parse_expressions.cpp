@@ -105,7 +105,7 @@ static ASTNode *parse_number(Lexer *lexer) {
     }
 
     get_next_token(lexer);
-    number_node->data_type = DataType::Long;
+    number_node->data_type = FundamentalType::Long;
     number_node->data_as.long_data = value;
     return number_node;
   }
@@ -117,7 +117,7 @@ static ASTNode *parse_number(Lexer *lexer) {
       value = value * base + char_to_int_function(number_string[index]);
 
     get_next_token(lexer);
-    number_node->data_type = DataType::UnsignedInt;
+    number_node->data_type = FundamentalType::UnsignedInt;
     number_node->data_as.unsigned_int_data = value;
     return number_node;
   }
@@ -129,7 +129,7 @@ static ASTNode *parse_number(Lexer *lexer) {
       value = value * base + char_to_int_function(number_string[index]);
 
     get_next_token(lexer);
-    number_node->data_type = DataType::LongLong;
+    number_node->data_type = FundamentalType::LongLong;
     number_node->data_as.long_long_data = value;
     return number_node;
   }
@@ -146,7 +146,7 @@ static ASTNode *parse_number(Lexer *lexer) {
       value = value * base + char_to_int_function(number_string[index]);
 
     get_next_token(lexer);
-    number_node->data_type = DataType::UnsignedLongLong;
+    number_node->data_type = FundamentalType::UnsignedLongLong;
     number_node->data_as.unsigned_long_long_data = value;
     return number_node;
   }
@@ -158,7 +158,7 @@ static ASTNode *parse_number(Lexer *lexer) {
     }
 
     get_next_token(lexer);
-    number_node->data_type = DataType::Int;
+    number_node->data_type = FundamentalType::Int;
     number_node->data_as.int_data = value;
     return number_node;
   }
