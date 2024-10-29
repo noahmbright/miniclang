@@ -17,9 +17,6 @@ Type *new_type(FundamentalType fundamental_type, Type *pointed_type) {
   new_type->fundamental_type = fundamental_type;
   new_type->declaration_specifier_flags.flags = 0;
 
-  assert(fundamental_type == FundamentalType::Pointer && pointed_type ||
-         fundamental_type != FundamentalType::Pointer && !pointed_type);
-
   return new_type;
 }
 
@@ -408,7 +405,6 @@ const Type *get_fundamental_type_pointer(FundamentalType type) {
     return TypedefNameType;
   case FundamentalType::Pointer:
   case FundamentalType::Function:
-    assert(false);
     return nullptr;
   }
 }

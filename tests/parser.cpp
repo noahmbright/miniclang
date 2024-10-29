@@ -101,7 +101,6 @@ void test5() {
 
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
-  printf("%s\n", node->object->identifier.c_str());
   assert(node->object->identifier == "x");
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
@@ -148,11 +147,13 @@ void test7() {
   assert(node);
   assert(node->type == ASTNodeType::Declaration);
   assert(node->object->identifier == "x");
+  assert(node->object->type->fundamental_type == FundamentalType::Pointer);
+  assert(node->object->type->pointed_type ==
+         get_fundamental_type_pointer(FundamentalType::Int));
+
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
-  fprintf(stderr,
-          "FIXME: Parse initializers, data structure for initializers\n\n");
-  // printf("test 7 passed\n\n");
+  printf("test 7 passed\n\n");
 }
 
 void test8() {
@@ -189,6 +190,6 @@ int main() {
   test4();
   test5();
   test6();
-  // test7();
+  test7();
   test8();
 }
