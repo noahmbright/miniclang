@@ -5,12 +5,14 @@
 #include <cstdlib>
 
 static void set_declaration_flag(TypeModifierFlag flag,
-                                 DeclarationSpecifierFlags *declaration) {
+    DeclarationSpecifierFlags* declaration)
+{
   declaration->flags |= flag;
 }
 
-Type *new_type(FundamentalType fundamental_type, Type *pointed_type) {
-  Type *new_type = (Type *)malloc(sizeof(Type));
+Type* new_type(FundamentalType fundamental_type, Type* pointed_type)
+{
+  Type* new_type = (Type*)malloc(sizeof(Type));
 
   new_type->function_data = nullptr;
   new_type->pointed_type = pointed_type;
@@ -22,7 +24,8 @@ Type *new_type(FundamentalType fundamental_type, Type *pointed_type) {
 
 static void
 handle_storage_class_specifier_flag(TypeModifierFlag flag,
-                                    DeclarationSpecifierFlags *declaration) {
+    DeclarationSpecifierFlags* declaration)
+{
   // At most, one storage-class specifier may be given in the declaration
   // specifiers in a  declaration, except that _Thread_local may appear with
   // static or extern.
@@ -32,22 +35,17 @@ handle_storage_class_specifier_flag(TypeModifierFlag flag,
   using enum TypeModifierFlag;
 
   // any of the storage classes are already specified
-  if (declaration->flags &
-      (TypeDef | Extern | Static | ThreadLocal | Auto | Register)) {
+  if (declaration->flags & (TypeDef | Extern | Static | ThreadLocal | Auto | Register)) {
     bool new_flag_is_thread_local = (flag == ThreadLocal);
     bool new_flag_is_extern_or_static = (flag == Static || flag == Extern);
 
     bool set_flag_is_thread_local = (declaration->flags & ThreadLocal);
-    bool set_flag_is_extern_or_static =
-        (declaration->flags == Static || declaration->flags == Extern);
+    bool set_flag_is_extern_or_static = (declaration->flags == Static || declaration->flags == Extern);
 
-    bool new_is_thread_and_set_is_extern_or_static =
-        new_flag_is_thread_local && set_flag_is_extern_or_static;
-    bool new_is_extern_or_static_and_set_is_thread =
-        new_flag_is_extern_or_static && set_flag_is_thread_local;
+    bool new_is_thread_and_set_is_extern_or_static = new_flag_is_thread_local && set_flag_is_extern_or_static;
+    bool new_is_extern_or_static_and_set_is_thread = new_flag_is_extern_or_static && set_flag_is_thread_local;
 
-    bool can_set_new_flag = new_is_extern_or_static_and_set_is_thread ||
-                            new_is_thread_and_set_is_extern_or_static;
+    bool can_set_new_flag = new_is_extern_or_static_and_set_is_thread || new_is_thread_and_set_is_extern_or_static;
 
     if (!can_set_new_flag) {
       fprintf(stderr, "Setting a storage class specifier a second time");
@@ -60,7 +58,8 @@ handle_storage_class_specifier_flag(TypeModifierFlag flag,
 
 static void
 check_flag_set_and_update_if_not(TypeModifierFlag flag,
-                                 DeclarationSpecifierFlags *declaration) {
+    DeclarationSpecifierFlags* declaration)
+{
   if (declaration->flags & flag) {
     fprintf(stderr, "repeating type specifier");
     return;
@@ -69,7 +68,8 @@ check_flag_set_and_update_if_not(TypeModifierFlag flag,
   set_declaration_flag(flag, declaration);
 }
 
-static void handle_align_as(DeclarationSpecifierFlags *declaration) {
+static void handle_align_as(DeclarationSpecifierFlags* declaration)
+{
   // An alignment attribute shall not be specified in a declaration of a
   // typedef, or a bit-field, or a function, or a parameter, or an object
   // declared with the register storage-class specifier.
@@ -80,8 +80,9 @@ static void handle_align_as(DeclarationSpecifierFlags *declaration) {
   set_declaration_flag(TypeModifierFlag::Alignas, declaration);
 }
 
-void update_declaration_specifiers(const Token *token,
-                                   DeclarationSpecifierFlags *declaration) {
+void update_declaration_specifiers(Token const* token,
+    DeclarationSpecifierFlags* declaration)
+{
   // TODO: handle static_assert
   switch (token->type) {
 
@@ -118,7 +119,7 @@ void update_declaration_specifiers(const Token *token,
     return;
   case TokenType::TypeDefName:
     check_flag_set_and_update_if_not(TypeModifierFlag::TypeDefName,
-                                     declaration);
+        declaration);
     return;
   case TokenType::Struct:
     check_flag_set_and_update_if_not(TypeModifierFlag::Struct, declaration);
@@ -146,14 +147,14 @@ void update_declaration_specifiers(const Token *token,
     return;
   case TokenType::ThreadLocal:
     handle_storage_class_specifier_flag(TypeModifierFlag::ThreadLocal,
-                                        declaration);
+        declaration);
     return;
   case TokenType::Auto:
     handle_storage_class_specifier_flag(TypeModifierFlag::Auto, declaration);
     return;
   case TokenType::Register:
     handle_storage_class_specifier_flag(TypeModifierFlag::Register,
-                                        declaration);
+        declaration);
     return;
 
     // If the same qualifier appears more than once in the same
@@ -195,7 +196,8 @@ void update_declaration_specifiers(const Token *token,
 }
 
 FundamentalType
-fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration) {
+fundamental_type_from_declaration(DeclarationSpecifierFlags* declaration)
+{
   // following ChibiCC's approach for handling the multiset
   // specification for type specifiers
   // augmenting by adding that e.g. long long long has too many longs
@@ -221,13 +223,11 @@ fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration) {
   case TypeModifierFlag::Short:
   case TypeModifierFlag::Short + TypeModifierFlag::Signed:
   case TypeModifierFlag::Short + TypeModifierFlag::Int:
-  case TypeModifierFlag::Signed + TypeModifierFlag::Short +
-      TypeModifierFlag::Int:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Short + TypeModifierFlag::Int:
     return FundamentalType::Short;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Short:
-  case TypeModifierFlag::Unsigned + TypeModifierFlag::Short +
-      TypeModifierFlag::Int:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Short + TypeModifierFlag::Int:
     return FundamentalType::UnsignedShort;
 
   case TypeModifierFlag::Int:
@@ -242,18 +242,15 @@ fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration) {
   case TypeModifierFlag::Long:
   case TypeModifierFlag::Signed + TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Int:
-  case TypeModifierFlag::Signed + TypeModifierFlag::Long +
-      TypeModifierFlag::Int:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Long + TypeModifierFlag::Int:
     return FundamentalType::Long;
 
   case TypeModifierFlag::Unsigned + TypeModifierFlag::Long:
-  case TypeModifierFlag::Unsigned + TypeModifierFlag::Long +
-      TypeModifierFlag::Int:
+  case TypeModifierFlag::Unsigned + TypeModifierFlag::Long + TypeModifierFlag::Int:
     return FundamentalType::UnsignedLong;
 
   case TypeModifierFlag::Long + TypeModifierFlag::Long:
-  case TypeModifierFlag::Signed + TypeModifierFlag::Long +
-      TypeModifierFlag::Long:
+  case TypeModifierFlag::Signed + TypeModifierFlag::Long + TypeModifierFlag::Long:
   case TypeModifierFlag::Long + TypeModifierFlag::Long + TypeModifierFlag::Int:
     return FundamentalType::LongLong;
 
@@ -275,14 +272,14 @@ fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration) {
   case TypeModifierFlag::Double + TypeModifierFlag::Complex:
     return FundamentalType::DoubleComplex;
 
-  case TypeModifierFlag::Long + TypeModifierFlag::Double +
-      TypeModifierFlag::Complex:
+  case TypeModifierFlag::Long + TypeModifierFlag::Double + TypeModifierFlag::Complex:
     return FundamentalType::LongDoubleComplex;
   }
   assert(false && "TypeKind from declaration UNREACHABLE");
 }
 
-bool is_integer_type(FundamentalType t) {
+bool is_integer_type(FundamentalType t)
+{
   switch (t) {
   case FundamentalType::SignedChar:
   case FundamentalType::Char:
@@ -302,7 +299,8 @@ bool is_integer_type(FundamentalType t) {
   }
 }
 
-bool is_floating_type(FundamentalType t) {
+bool is_floating_type(FundamentalType t)
+{
   switch (t) {
   case FundamentalType::Float:
   case FundamentalType::Double:
@@ -314,46 +312,38 @@ bool is_floating_type(FundamentalType t) {
   }
 }
 
-bool is_arithmetic_type(FundamentalType t) {
+bool is_arithmetic_type(FundamentalType t)
+{
   return is_integer_type(t) || is_floating_type(t);
 }
 
-extern const Type *const VoidType = new_type(FundamentalType::Void);
-extern const Type *const CharType = new_type(FundamentalType::Char);
-extern const Type *const SignedCharType = new_type(FundamentalType::SignedChar);
-extern const Type *const UnsignedCharType =
-    new_type(FundamentalType::UnsignedChar);
-extern const Type *const ShortType = new_type(FundamentalType::Short);
-extern const Type *const UnsignedShortType =
-    new_type(FundamentalType::UnsignedShort);
-extern const Type *const IntType = new_type(FundamentalType::Int);
-extern const Type *const UnsignedIntType =
-    new_type(FundamentalType::UnsignedInt);
-extern const Type *const LongType = new_type(FundamentalType::Long);
-extern const Type *const UnsignedLongType =
-    new_type(FundamentalType::UnsignedLong);
-extern const Type *const LongLongType = new_type(FundamentalType::LongLong);
-extern const Type *const UnsignedLongLongType =
-    new_type(FundamentalType::UnsignedLongLong);
-extern const Type *const FloatType = new_type(FundamentalType::Float);
-extern const Type *const DoubleType = new_type(FundamentalType::Double);
-extern const Type *const LongDoubleType = new_type(FundamentalType::LongDouble);
-extern const Type *const FloatComplexType =
-    new_type(FundamentalType::FloatComplex);
-extern const Type *const DoubleComplexType =
-    new_type(FundamentalType::DoubleComplex);
-extern const Type *const LongDoubleComplexType =
-    new_type(FundamentalType::LongDoubleComplex);
-extern const Type *const BoolType = new_type(FundamentalType::Bool);
-extern const Type *const StructType = new_type(FundamentalType::Struct);
-extern const Type *const UnionType = new_type(FundamentalType::Union);
-extern const Type *const EnumType = new_type(FundamentalType::Enum);
-extern const Type *const EnumeratedValueType =
-    new_type(FundamentalType::EnumeratedValue);
-extern const Type *const TypedefNameType =
-    new_type(FundamentalType::TypedefName);
+extern Type const* const VoidType = new_type(FundamentalType::Void);
+extern Type const* const CharType = new_type(FundamentalType::Char);
+extern Type const* const SignedCharType = new_type(FundamentalType::SignedChar);
+extern Type const* const UnsignedCharType = new_type(FundamentalType::UnsignedChar);
+extern Type const* const ShortType = new_type(FundamentalType::Short);
+extern Type const* const UnsignedShortType = new_type(FundamentalType::UnsignedShort);
+extern Type const* const IntType = new_type(FundamentalType::Int);
+extern Type const* const UnsignedIntType = new_type(FundamentalType::UnsignedInt);
+extern Type const* const LongType = new_type(FundamentalType::Long);
+extern Type const* const UnsignedLongType = new_type(FundamentalType::UnsignedLong);
+extern Type const* const LongLongType = new_type(FundamentalType::LongLong);
+extern Type const* const UnsignedLongLongType = new_type(FundamentalType::UnsignedLongLong);
+extern Type const* const FloatType = new_type(FundamentalType::Float);
+extern Type const* const DoubleType = new_type(FundamentalType::Double);
+extern Type const* const LongDoubleType = new_type(FundamentalType::LongDouble);
+extern Type const* const FloatComplexType = new_type(FundamentalType::FloatComplex);
+extern Type const* const DoubleComplexType = new_type(FundamentalType::DoubleComplex);
+extern Type const* const LongDoubleComplexType = new_type(FundamentalType::LongDoubleComplex);
+extern Type const* const BoolType = new_type(FundamentalType::Bool);
+extern Type const* const StructType = new_type(FundamentalType::Struct);
+extern Type const* const UnionType = new_type(FundamentalType::Union);
+extern Type const* const EnumType = new_type(FundamentalType::Enum);
+extern Type const* const EnumeratedValueType = new_type(FundamentalType::EnumeratedValue);
+extern Type const* const TypedefNameType = new_type(FundamentalType::TypedefName);
 
-const Type *get_fundamental_type_pointer(FundamentalType type) {
+Type const* get_fundamental_type_pointer(FundamentalType type)
+{
   switch (type) {
   case FundamentalType::Void:
     return VoidType;

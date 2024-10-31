@@ -4,13 +4,15 @@
 
 #include <cassert>
 
-static void error_and_stop_parsing(const char *message) {
+static void error_and_stop_parsing(char const* message)
+{
   fprintf(stderr, "%s", message);
   exit(1);
 }
 
-ASTNode *new_ast_node(ASTNodeType type = ASTNodeType::Void) {
-  ASTNode *new_node = (ASTNode *)malloc(sizeof(ASTNode));
+ASTNode* new_ast_node(ASTNodeType type = ASTNodeType::Void)
+{
+  ASTNode* new_node = (ASTNode*)malloc(sizeof(ASTNode));
 
   new_node->type = type;
   new_node->data_type = FundamentalType::Void;
@@ -23,8 +25,9 @@ ASTNode *new_ast_node(ASTNodeType type = ASTNodeType::Void) {
   return new_node;
 }
 
-static Object *new_object(const std::string &identifier, const Type *type) {
-  Object *new_object = (Object *)malloc(sizeof(Object));
+static Object* new_object(std::string const& identifier, Type const* type)
+{
+  Object* new_object = (Object*)malloc(sizeof(Object));
   new_object->identifier = identifier;
   new_object->type = type;
   new_object->function_body = nullptr;
@@ -32,11 +35,11 @@ static Object *new_object(const std::string &identifier, const Type *type) {
   return new_object;
 }
 
-static const FunctionData *
-new_function_data(const Type *return_type,
-                  const FunctionParameter *parameter_list, bool is_variadic) {
-  FunctionData *new_function_type =
-      (FunctionData *)malloc(sizeof(FunctionData));
+static FunctionData const*
+new_function_data(Type const* return_type,
+    FunctionParameter const* parameter_list, bool is_variadic)
+{
+  FunctionData* new_function_type = (FunctionData*)malloc(sizeof(FunctionData));
 
   new_function_type->return_type = return_type;
   new_function_type->parameter_list = parameter_list;
@@ -45,14 +48,14 @@ new_function_data(const Type *return_type,
   return new_function_type;
 }
 
-static FunctionParameter *new_function_parameter(const Type *parameter_type) {
-  FunctionParameter *new_parameter =
-      (FunctionParameter *)malloc(sizeof(FunctionParameter));
+static FunctionParameter* new_function_parameter(Type const* parameter_type)
+{
+  FunctionParameter* new_parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
 
   new_parameter->parameter_type = parameter_type;
 
   return new_parameter;
-};
+}
 
 /*static bool variable_in_scope(std::string variable_name, Scope *scope) {
 
@@ -65,9 +68,10 @@ static FunctionParameter *new_function_parameter(const Type *parameter_type) {
   return false;
 }*/
 
-static bool typedef_name_in_scope(const std::string &type_name, Scope *scope) {
+static bool typedef_name_in_scope(std::string const& type_name, Scope* scope)
+{
 
-  for (Scope *current_scope = scope; current_scope != nullptr;
+  for (Scope* current_scope = scope; current_scope != nullptr;
        current_scope = current_scope->parent_scope) {
 
     if (current_scope->typedef_names.contains(type_name)) {
@@ -78,7 +82,8 @@ static bool typedef_name_in_scope(const std::string &type_name, Scope *scope) {
   return false;
 }
 
-static bool token_is_type_qualifier(const Token *token) {
+static bool token_is_type_qualifier(Token const* token)
+{
   switch (token->type) {
   case TokenType::Const:
   case TokenType::Restrict:
@@ -90,7 +95,8 @@ static bool token_is_type_qualifier(const Token *token) {
   }
 }
 
-static bool token_is_storage_class_specifier(const Token *token) {
+static bool token_is_storage_class_specifier(Token const* token)
+{
   switch (token->type) {
   case TokenType::Typedef:
   case TokenType::Extern:
@@ -104,15 +110,18 @@ static bool token_is_storage_class_specifier(const Token *token) {
   }
 }
 
-static bool token_is_alignment_specifier(const Token *token) {
+static bool token_is_alignment_specifier(Token const* token)
+{
   return token->type == TokenType::AlignAs;
 }
 
-static bool token_is_function_specifier(const Token *token) {
+static bool token_is_function_specifier(Token const* token)
+{
   return token->type == TokenType::Inline || token->type == TokenType::NoReturn;
 }
 
-static bool token_is_type_specifier(const Token *token, Scope *scope) {
+static bool token_is_type_specifier(Token const* token, Scope* scope)
+{
   switch (token->type) {
   case TokenType::Void:
   case TokenType::Char:
@@ -135,11 +144,9 @@ static bool token_is_type_specifier(const Token *token, Scope *scope) {
   }
 }
 
-bool token_is_declaration_specifier(const Token *token, Scope *scope) {
-  return token_is_storage_class_specifier(token) ||
-         token_is_type_specifier(token, scope) ||
-         token_is_type_qualifier(token) || token_is_function_specifier(token) ||
-         token_is_alignment_specifier(token);
+bool token_is_declaration_specifier(Token const* token, Scope* scope)
+{
+  return token_is_storage_class_specifier(token) || token_is_type_specifier(token, scope) || token_is_type_qualifier(token) || token_is_function_specifier(token) || token_is_alignment_specifier(token);
 }
 
 // 6.7 Declarations
@@ -160,8 +167,9 @@ bool token_is_declaration_specifier(const Token *token, Scope *scope) {
 //
 // one set of declaration specifiers applies to each item in the init declarator
 // list, so we can cache all those in this DeclarationSpecifierFlags object
-DeclarationSpecifierFlags parse_declaration_specifiers(Lexer *lexer,
-                                                       Scope *scope) {
+DeclarationSpecifierFlags parse_declaration_specifiers(Lexer* lexer,
+    Scope* scope)
+{
 
   DeclarationSpecifierFlags declaration;
   declaration.flags = 0;
@@ -187,22 +195,19 @@ DeclarationSpecifierFlags parse_declaration_specifiers(Lexer *lexer,
 //
 // a declaration can declare several variables
 // handle this by producing a linked list of AST nodes
-ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
+ASTNode* parse_declaration(Lexer* lexer, Scope* scope)
+{
 
-  assert(token_is_declaration_specifier(get_current_token(lexer), scope) &&
-         "parse_declaration: first token is not a declaration specifier");
+  assert(token_is_declaration_specifier(get_current_token(lexer), scope) && "parse_declaration: first token is not a declaration specifier");
 
   // get the declspecs, e.g. the const int
-  DeclarationSpecifierFlags declaration =
-      parse_declaration_specifiers(lexer, scope);
+  DeclarationSpecifierFlags declaration = parse_declaration_specifiers(lexer, scope);
 
-  FundamentalType fundamental_type =
-      fundamental_type_from_declaration(&declaration);
+  FundamentalType fundamental_type = fundamental_type_from_declaration(&declaration);
 
-  const Type *fundamental_type_ptr =
-      get_fundamental_type_pointer(fundamental_type);
+  Type const* fundamental_type_ptr = get_fundamental_type_pointer(fundamental_type);
 
-  ASTNode *ast_node = new_ast_node(ASTNodeType::Declaration);
+  ASTNode* ast_node = new_ast_node(ASTNodeType::Declaration);
   ast_node->object = parse_declarator(lexer, fundamental_type_ptr, scope);
 
   parse_rest_of_declaration(lexer, scope, ast_node);
@@ -210,16 +215,17 @@ ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
   // skip semicolon
   assert(get_current_token(lexer)->type == TokenType::Semicolon);
   expect_and_get_next_token(lexer, TokenType::Semicolon,
-                            "Expected semicolon at end of declaration\n");
+      "Expected semicolon at end of declaration\n");
   return ast_node;
 }
 
 // having this loop is useful in both parsing a normal declaration like above,
 // and in disambiguating function definitions and declarations
 // this appends declaration nodes to the head that is passed to it
-void parse_rest_of_declaration(Lexer *lexer, Scope *scope,
-                               ASTNode *head_ast_node) {
-  ASTNode *previous_ast_node = head_ast_node;
+void parse_rest_of_declaration(Lexer* lexer, Scope* scope,
+    ASTNode* head_ast_node)
+{
+  ASTNode* previous_ast_node = head_ast_node;
 
   // if first declarator is initialized, process that
   if (get_current_token(lexer)->type == TokenType::Equals) {
@@ -235,9 +241,8 @@ void parse_rest_of_declaration(Lexer *lexer, Scope *scope,
         "Parsing declaration, expected comma or semicolon");
 
     // make new node with object from declarator
-    ASTNode *current_ast_node = new_ast_node(ASTNodeType::Declaration);
-    current_ast_node->object =
-        parse_declarator(lexer, head_ast_node->object->type, scope);
+    ASTNode* current_ast_node = new_ast_node(ASTNodeType::Declaration);
+    current_ast_node->object = parse_declarator(lexer, head_ast_node->object->type, scope);
 
     // new identifier is explicitly initialized - get initializer
     if (get_current_token(lexer)->type == TokenType::Equals) {
@@ -254,7 +259,8 @@ void parse_rest_of_declaration(Lexer *lexer, Scope *scope,
 
 // 6.7.6 Declarators
 
-static const Type *parse_array_dimensions(Lexer *lexer) {
+static Type const* parse_array_dimensions(Lexer* lexer)
+{
   assert(get_current_token(lexer)->type == TokenType::LBracket);
   // FIXME
   assert(false);
@@ -274,8 +280,9 @@ static const Type *parse_array_dimensions(Lexer *lexer) {
 // the presence/absence of an identifier can be used to disambiguate
 //
 // this function returns a function pointer type
-static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
-                                        Scope *scope) {
+static Type const* parse_parameter_list(Lexer* lexer, Type const* return_type,
+    Scope* scope)
+{
   assert(get_current_token(lexer)->type == TokenType::LParen);
   get_next_token(lexer);
 
@@ -283,12 +290,12 @@ static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
     error_and_stop_parsing(
         "Function declaration only allowed in global scope\n");
 
-  Type *function_type = new_type(FundamentalType::Function);
+  Type* function_type = new_type(FundamentalType::Function);
 
   // making/traversing linked list of function params
   FunctionParameter parameter_list_anchor;
   parameter_list_anchor.next_parameter = nullptr;
-  FunctionParameter *previous_parameter = &parameter_list_anchor;
+  FunctionParameter* previous_parameter = &parameter_list_anchor;
 
   bool is_variadic = false;
   bool parsed_first_parameter_yet = false;
@@ -307,17 +314,15 @@ static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
     if (get_current_token(lexer)->type == TokenType::Ellipsis) {
       is_variadic = true;
       expect_and_get_next_token(lexer, TokenType::RParen,
-                                "Parsing parameter list, expected right "
-                                "parenthesis after ellipsis\n");
+          "Parsing parameter list, expected right "
+          "parenthesis after ellipsis\n");
       return function_type;
     }
 
     // regular parameter, definitely starting with a type specifier
-    DeclarationSpecifierFlags flags =
-        parse_declaration_specifiers(lexer, scope);
+    DeclarationSpecifierFlags flags = parse_declaration_specifiers(lexer, scope);
 
-    const Type *parameter_type =
-        get_fundamental_type_pointer(fundamental_type_from_declaration(&flags));
+    Type const* parameter_type = get_fundamental_type_pointer(fundamental_type_from_declaration(&flags));
 
     // potentially a pointer argument
     if (get_current_token(lexer)->type == TokenType::Asterisk)
@@ -329,14 +334,13 @@ static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
 
     // FIXME: finally either a function pointer or array parameter
 
-    FunctionParameter *current_function_parameter =
-        new_function_parameter(parameter_type);
+    FunctionParameter* current_function_parameter = new_function_parameter(parameter_type);
 
     previous_parameter->next_parameter = current_function_parameter;
     previous_parameter = previous_parameter->next_parameter;
   } // end while loop
 
-  const FunctionData *function_data = new_function_data(
+  FunctionData const* function_data = new_function_data(
       return_type, parameter_list_anchor.next_parameter, is_variadic);
 
   function_type->function_data = function_data;
@@ -361,14 +365,15 @@ static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
 //      of a certain type: variable, function, array/ptr
 //
 // declarator: pointer(opt) direct-declarator
-Object *parse_declarator(Lexer *lexer, const Type *base_type, Scope *scope) {
+Object* parse_declarator(Lexer* lexer, Type const* base_type, Scope* scope)
+{
   // in `const int* const x;` we enter this function on the asterisk
   // in `int x;`              we enter on the x
 
   // return type is the type of the object this function returns
   // it can be mutated either by becoming the base type of a pointer/array
   // and/or by becoming the return type of a function
-  const Type *return_type = base_type;
+  Type const* return_type = base_type;
 
   // check for pointer type
   if (get_current_token(lexer)->type == TokenType::Asterisk) {
@@ -377,12 +382,12 @@ Object *parse_declarator(Lexer *lexer, const Type *base_type, Scope *scope) {
 
   // after checking for pointer types, a declarator needs to specify an
   // identifier
-  const Token *identifier_token = get_current_token(lexer);
-  const std::string identifier = identifier_token->string;
+  Token const* identifier_token = get_current_token(lexer);
+  std::string const identifier = identifier_token->string;
 
   expect_and_get_next_token(lexer, TokenType::Identifier,
-                            "Parsing declarator, expected identifier name "
-                            "after declaration specifiers and pointers");
+      "Parsing declarator, expected identifier name "
+      "after declaration specifiers and pointers");
 
   // next is the direct declarators, which we don't have an function for
   // a direct declarator begins with an identifier, followed by either array
@@ -397,9 +402,10 @@ Object *parse_declarator(Lexer *lexer, const Type *base_type, Scope *scope) {
 }
 
 // e.g. parse a const*
-static DeclarationSpecifierFlags parse_type_qualifier_list(Lexer *lexer) {
+static DeclarationSpecifierFlags parse_type_qualifier_list(Lexer* lexer)
+{
 
-  const Token *current_token = get_current_token(lexer);
+  Token const* current_token = get_current_token(lexer);
 
   DeclarationSpecifierFlags declaration;
   declaration.flags = 0;
@@ -421,19 +427,19 @@ static DeclarationSpecifierFlags parse_type_qualifier_list(Lexer *lexer) {
 //
 // pointer: * type-qualifier-list(optional)
 //          * type-qualifier-list(optional) pointer
-const Type *parse_pointer(Lexer *lexer, const Type *base_type) {
+Type const* parse_pointer(Lexer* lexer, Type const* base_type)
+{
   assert(get_current_token(lexer)->type == TokenType::Asterisk);
 
-  const Type *current_base_type = base_type;
+  Type const* current_base_type = base_type;
 
   // if we get an int **x, we want to return the pointer to the pointer to int
   while (get_current_token(lexer)->type == TokenType::Asterisk) {
     get_next_token(lexer);
 
-    Type *pointer_type = new_type(FundamentalType::Pointer);
+    Type* pointer_type = new_type(FundamentalType::Pointer);
 
-    DeclarationSpecifierFlags type_qualifiers =
-        parse_type_qualifier_list(lexer);
+    DeclarationSpecifierFlags type_qualifiers = parse_type_qualifier_list(lexer);
 
     pointer_type->declaration_specifier_flags = type_qualifiers;
     pointer_type->pointed_type = current_base_type;
@@ -471,17 +477,17 @@ const Type *parse_pointer(Lexer *lexer, const Type *base_type) {
 // type-name:
 //   specifier-qualifier-list abstract-declarator(optional)
 //      spec-qual-list is like const int
-void parse_typename() {}
+void parse_typename() { }
 
 // specifier-qualifier-list:
 //      specifier-qualifier-list(optional) type-specifiers/qualifier
-DeclarationSpecifierFlags parse_specifier_qualifier_list(Lexer *lexer,
-                                                         Scope *scope) {
-  const Token *current_token = get_next_token(lexer);
+DeclarationSpecifierFlags parse_specifier_qualifier_list(Lexer* lexer,
+    Scope* scope)
+{
+  Token const* current_token = get_next_token(lexer);
   DeclarationSpecifierFlags declaration;
 
-  while (token_is_type_specifier(current_token, scope) ||
-         token_is_type_qualifier(current_token)) {
+  while (token_is_type_specifier(current_token, scope) || token_is_type_qualifier(current_token)) {
 
     update_declaration_specifiers(current_token, &declaration);
     current_token = get_next_token(lexer);
@@ -518,7 +524,8 @@ DeclarationSpecifierFlags parse_specifier_qualifier_list(Lexer *lexer,
 //      assignment-expression
 //      { initializer-list }
 //      { initializer-list, }
-ASTNode *parse_initializer(Lexer *lexer) {
+ASTNode* parse_initializer(Lexer* lexer)
+{
 
   // { initializer list }
   if (get_current_token(lexer)->type == TokenType::LBracket) {
@@ -542,12 +549,13 @@ ASTNode *parse_initializer(Lexer *lexer) {
 //      designation(optional) initializer
 //      initializer-list, designation(optional) initializer
 //
-ASTNode *parse_initializer_list(Lexer *lexer) {
+ASTNode* parse_initializer_list(Lexer* lexer)
+{
 
   // FIXME: struct initializers
   if (get_current_token(lexer)->type == TokenType::LBracket) {
     expect_and_get_next_token(lexer, TokenType::RBracket,
-                              "Expected closing bracket in array designator");
+        "Expected closing bracket in array designator");
   }
 
   // FIXME: array initializers
@@ -556,9 +564,9 @@ ASTNode *parse_initializer_list(Lexer *lexer) {
 
     if (get_current_token(lexer)->type != TokenType::Identifier)
       error_token(lexer,
-                  "Expected identifer name after '.' in intializer list");
+          "Expected identifer name after '.' in intializer list");
 
-    const std::string &identifier = get_current_token(lexer)->string;
+    std::string const& identifier = get_current_token(lexer)->string;
     (void)identifier;
   }
 

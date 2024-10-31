@@ -6,3 +6,4 @@ if test -n $1;then
 fi
 
 ./build/lexer_test
+./build/parser_test

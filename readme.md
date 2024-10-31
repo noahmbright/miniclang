@@ -69,9 +69,16 @@ is a series of declarations or function definitions. Until you hit the `\0`
 character, just keep chomping away. 
 
 A C program is a series of declarations and function definitions, but this
-requires disambiguation. `int x;` is a declaration and `int x(){...}` is a
-function definition. A function definition has the parenthesis around its
-parameter list followed by the curly braces for the body of the definition.
+requires disambiguation; `int x;` and `int x();` are both declarations, while
+`int x(){...}` is a function definition. A function definition has the
+parenthesis around its parameter list followed by the curly braces for the body
+of the definition.
+
+Most of the parsing functions return `ASTNode`s, which I think of as roots of
+small abstract syntax trees. Something like `int x, int y = 3 + 4 * 5;` is
+parsed as a declaration. The returned `ASTNode` will represent the definition
+of `x`, and it will have a pointer `next` pointing to the declaration of `y`,
+with `lhs` and `rhs` recursively defining the expression `3 + 4 * 5`.
 
 ## Codegen
 

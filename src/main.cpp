@@ -3,8 +3,9 @@
 #include <unistd.h>
 
 // from crafting interpreters, ch 16
-static char *read_file(const char *path) {
-  FILE *file = fopen(path, "r");
+static char* read_file(char const* path)
+{
+  FILE* file = fopen(path, "r");
   if (file == NULL) {
     fprintf(stderr, "Could not open file %s, aborting.\n", path);
   }
@@ -13,7 +14,7 @@ static char *read_file(const char *path) {
   long file_size = ftell(file);
   rewind(file);
 
-  char *buffer = (char *)malloc(file_size + 1);
+  char* buffer = (char*)malloc(file_size + 1);
   if (buffer == NULL) {
     fprintf(stderr, "Could not buffer file %s, aborting.\n", path);
   }
@@ -29,11 +30,12 @@ static char *read_file(const char *path) {
   return buffer;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv)
+{
 
   for (int i = 1; i < argc; i++) {
     if (access(argv[i], F_OK) == 0) {
-      char *buffer = read_file(argv[i]);
+      char* buffer = read_file(argv[i]);
       (void)buffer;
     } else {
       fprintf(stderr, "File %s not found, aborting.\n", argv[i]);

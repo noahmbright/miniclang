@@ -32,7 +32,8 @@
 // the simplified results of parsing a larger expression wrapped in parentheses,
 // or a generic-selection
 
-static int hex_char_to_int(char c) {
+static int hex_char_to_int(char c)
+{
 
   if (c >= '0' && c <= '9')
     return c - '0';
@@ -44,34 +45,37 @@ static int hex_char_to_int(char c) {
   assert(false && "hex_char_to_int got invalid hex digit");
 }
 
-static int decimal_to_int(char c) {
+static int decimal_to_int(char c)
+{
   assert(c >= '0' && c <= '9');
   return c - '0';
 }
 
-static int octal_to_int(char c) {
+static int octal_to_int(char c)
+{
   assert(c >= '0' && c <= '7');
   return c - '0';
 }
 
-static int binary_to_int(char c) {
+static int binary_to_int(char c)
+{
   assert(c >= '0' && c <= '1');
   return c - '0';
 }
 
 // FIXME add support for floats and doubles
-static ASTNode *parse_number(Lexer *lexer) {
+static ASTNode* parse_number(Lexer* lexer)
+{
 
-  Token *current_token = get_current_token(lexer);
-  assert(current_token->type == TokenType::Number &&
-         "Parsing number but initial token type is not number");
+  Token* current_token = get_current_token(lexer);
+  assert(current_token->type == TokenType::Number && "Parsing number but initial token type is not number");
 
   // for hex/binary/octal numbers, get the base and and index to
   // start iterating through the string containing the numeric value
   // e.g., to skip the 0x in a hex constant
   int base = 10;
   int index = 0;
-  const std::string number_string = current_token->string;
+  std::string const number_string = current_token->string;
   int n = number_string.length();
   int (*char_to_int_function)(char) = decimal_to_int;
 
@@ -93,7 +97,7 @@ static ASTNode *parse_number(Lexer *lexer) {
     }
   }
 
-  ASTNode *number_node = new_ast_node(ASTNodeType::NumericConstant);
+  ASTNode* number_node = new_ast_node(ASTNodeType::NumericConstant);
 
   switch ((get_current_token(lexer)->type)) {
   case TokenType::IntegerSuffixl:
@@ -176,7 +180,8 @@ static ASTNode *parse_number(Lexer *lexer) {
 //      string-literal
 //      (expression)
 //      generic-selection
-ASTNode *parse_primary_expression(Lexer *lexer /*, Scope *scope*/) {
+ASTNode* parse_primary_expression(Lexer* lexer /*, Scope *scope*/)
+{
 
   switch (get_current_token(lexer)->type) {
     // FIXME: parse identifiers
@@ -203,17 +208,13 @@ ASTNode *parse_primary_expression(Lexer *lexer /*, Scope *scope*/) {
 //       postfix-expression --
 //       ( type-name ) { initializer-list }
 //       ( type-name ) { initializer-list , }
-ASTNode *parse_postfix_expression(Lexer *lexer) {
-  ASTNode *root = parse_primary_expression(lexer);
+ASTNode* parse_postfix_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_primary_expression(lexer);
 
   // FIXME
-  const Token *current_token = get_current_token(lexer);
-  while (current_token->type == TokenType::LBracket ||
-         current_token->type == TokenType::LParen ||
-         current_token->type == TokenType::Dot ||
-         current_token->type == TokenType::ArrowOperator ||
-         current_token->type == TokenType::PlusPlus ||
-         current_token->type == TokenType::MinusMinus) {
+  Token const* current_token = get_current_token(lexer);
+  while (current_token->type == TokenType::LBracket || current_token->type == TokenType::LParen || current_token->type == TokenType::Dot || current_token->type == TokenType::ArrowOperator || current_token->type == TokenType::PlusPlus || current_token->type == TokenType::MinusMinus) {
   }
   // FIXME: type name initializer list ones
 
@@ -229,34 +230,35 @@ ASTNode *parse_postfix_expression(Lexer *lexer) {
 //  sizeof unary-expr
 //  sizeof (typename)
 //  _Alignof (typename)
-static bool is_unary_operator(Token *token) {
+static bool is_unary_operator(Token* token)
+{
   TokenType t = token->type;
   using enum TokenType;
-  return t == Ampersand || t == Asterisk || t == Plus || t == Minus ||
-         t == Tilde || t == Bang || t == PlusPlus || t == MinusMinus ||
-         t == SizeOf; // t== Alignof;
+  return t == Ampersand || t == Asterisk || t == Plus || t == Minus || t == Tilde || t == Bang || t == PlusPlus || t == MinusMinus || t == SizeOf; // t== Alignof;
 }
-ASTNode *parse_unary_expression(Lexer *lexer) {
-  Token *current_token = get_current_token(lexer);
+ASTNode* parse_unary_expression(Lexer* lexer)
+{
+  Token* current_token = get_current_token(lexer);
   // FIXME: Unary operators
   while (is_unary_operator(current_token)) {
   }
 
-  ASTNode *root = parse_postfix_expression(lexer);
+  ASTNode* root = parse_postfix_expression(lexer);
   return root;
 }
 
 // 6.5.4 cast-expr
 //          unary-expr
 //          (typename) cast-expr
-ASTNode *parse_cast_expression(Lexer *lexer) {
+ASTNode* parse_cast_expression(Lexer* lexer)
+{
   if (get_current_token(lexer)->type == TokenType::LParen) {
     // FIXME: Parse typename
     expect_and_get_next_token(lexer, TokenType::RParen,
-                              "Type cast expected RParen");
+        "Type cast expected RParen");
   }
 
-  ASTNode *root = parse_unary_expression(lexer);
+  ASTNode* root = parse_unary_expression(lexer);
 
   return root;
 }
@@ -324,9 +326,10 @@ ASTNode *parse_cast_expression(Lexer *lexer) {
 //
 
 // FIXME: When to do type checking/casting?
-ASTNode *new_binary_expression_node(ASTNodeType type, ASTNode *lhs,
-                                    ASTNode *rhs) {
-  ASTNode *binary_ast_node = new_ast_node(type);
+ASTNode* new_binary_expression_node(ASTNodeType type, ASTNode* lhs,
+    ASTNode* rhs)
+{
+  ASTNode* binary_ast_node = new_ast_node(type);
   binary_ast_node->lhs = lhs;
   binary_ast_node->rhs = rhs;
 
@@ -344,34 +347,33 @@ ASTNode *new_binary_expression_node(ASTNodeType type, ASTNode *lhs,
 // cast node. If we see a *, the node becomes a multiplication node with an LHS
 // equal to the cast node we initially parse, and an RHS equal to the result of
 // parsing a cast starting on the next node
-ASTNode *parse_multiplicative_expression(Lexer *lexer) {
+ASTNode* parse_multiplicative_expression(Lexer* lexer)
+{
   // get lhs, root of this parse subtree is whatever the cast expr gives us
-  ASTNode *root = parse_cast_expression(lexer);
+  ASTNode* root = parse_cast_expression(lexer);
 
-  const Token *current_token = get_current_token(lexer);
+  Token const* current_token = get_current_token(lexer);
 
-  while (current_token->type == TokenType::Asterisk ||
-         current_token->type == TokenType::ForwardSlash ||
-         current_token->type == TokenType::Modulo) {
+  while (current_token->type == TokenType::Asterisk || current_token->type == TokenType::ForwardSlash || current_token->type == TokenType::Modulo) {
 
     switch (current_token->type) {
       // hit *, now the root should be the multiplication operation
     case TokenType::Asterisk:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Multiplication, root,
-                                        parse_cast_expression(lexer));
+          parse_cast_expression(lexer));
       break;
 
     case TokenType::ForwardSlash:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Division, root,
-                                        parse_cast_expression(lexer));
+          parse_cast_expression(lexer));
       break;
 
     case TokenType::Modulo:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Modulo, root,
-                                        parse_cast_expression(lexer));
+          parse_cast_expression(lexer));
       break;
 
     default:
@@ -385,25 +387,25 @@ ASTNode *parse_multiplicative_expression(Lexer *lexer) {
 // 6.5.6 add-expr
 //          mult-expr
 //          add-expr (+ or -) mult-expr
-ASTNode *parse_additive_expression(Lexer *lexer) {
-  ASTNode *root = parse_multiplicative_expression(lexer);
+ASTNode* parse_additive_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_multiplicative_expression(lexer);
 
-  const Token *current_token = get_current_token(lexer);
+  Token const* current_token = get_current_token(lexer);
 
-  while (current_token->type == TokenType::Plus ||
-         current_token->type == TokenType::Minus) {
+  while (current_token->type == TokenType::Plus || current_token->type == TokenType::Minus) {
 
     switch (current_token->type) {
     case TokenType::Plus:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Addition, root,
-                                        parse_multiplicative_expression(lexer));
+          parse_multiplicative_expression(lexer));
       break;
 
     case TokenType::Minus:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::Subtraction, root,
-                                        parse_multiplicative_expression(lexer));
+          parse_multiplicative_expression(lexer));
       break;
 
     default:
@@ -417,23 +419,23 @@ ASTNode *parse_additive_expression(Lexer *lexer) {
 // 6.5.7 shift-expr
 //          add-expr
 //          shift-expr (>> or <<) add-expr
-ASTNode *parse_shift_expression(Lexer *lexer) {
-  ASTNode *root = parse_additive_expression(lexer);
+ASTNode* parse_shift_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_additive_expression(lexer);
 
-  const Token *current_token = get_current_token(lexer);
-  while (current_token->type == TokenType::BitShiftLeft ||
-         current_token->type == TokenType::BitShiftRight) {
+  Token const* current_token = get_current_token(lexer);
+  while (current_token->type == TokenType::BitShiftLeft || current_token->type == TokenType::BitShiftRight) {
     switch (current_token->type) {
     case TokenType::BitShiftLeft:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
-                                        parse_additive_expression(lexer));
+          parse_additive_expression(lexer));
       break;
 
     case TokenType::BitShiftRight:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
-                                        parse_additive_expression(lexer));
+          parse_additive_expression(lexer));
       break;
 
     default:
@@ -447,39 +449,37 @@ ASTNode *parse_shift_expression(Lexer *lexer) {
 // 6.5.8 relational-expr
 //          shift-expr
 //          relational-expr (< or > or <= or >=) shift-expr
-ASTNode *parse_relational_expression(Lexer *lexer) {
-  ASTNode *root = parse_shift_expression(lexer);
+ASTNode* parse_relational_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_shift_expression(lexer);
 
-  const Token *current_token = get_current_token(lexer);
+  Token const* current_token = get_current_token(lexer);
 
-  while (current_token->type == TokenType::LessThan ||
-         current_token->type == TokenType::LessThanOrEqualTo ||
-         current_token->type == TokenType::GreaterThan ||
-         current_token->type == TokenType::GreaterThanOrEqualTo) {
+  while (current_token->type == TokenType::LessThan || current_token->type == TokenType::LessThanOrEqualTo || current_token->type == TokenType::GreaterThan || current_token->type == TokenType::GreaterThanOrEqualTo) {
     switch (current_token->type) {
 
     case TokenType::LessThan:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::LessThan, root,
-                                        parse_shift_expression(lexer));
+          parse_shift_expression(lexer));
       break;
 
     case TokenType::LessThanOrEqualTo:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::LessThanOrEqualTo, root,
-                                        parse_shift_expression(lexer));
+          parse_shift_expression(lexer));
       break;
 
     case TokenType::GreaterThan:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::GreaterThan, root,
-                                        parse_shift_expression(lexer));
+          parse_shift_expression(lexer));
       break;
 
     case TokenType::GreaterThanOrEqualTo:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::GreaterThanOrEqualTo, root,
-                                        parse_shift_expression(lexer));
+          parse_shift_expression(lexer));
 
     default:
       break;
@@ -492,25 +492,25 @@ ASTNode *parse_relational_expression(Lexer *lexer) {
 // 6.5.9 equality-expr
 //          relational-expr
 //          equality-expr (== or !=) relational-expr
-ASTNode *parse_equality_expression(Lexer *lexer) {
-  ASTNode *root = parse_relational_expression(lexer);
+ASTNode* parse_equality_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_relational_expression(lexer);
 
-  const Token *current_token = get_current_token(lexer);
+  Token const* current_token = get_current_token(lexer);
 
-  while (current_token->type == TokenType::BitShiftLeft ||
-         current_token->type == TokenType::BitShiftRight) {
+  while (current_token->type == TokenType::BitShiftLeft || current_token->type == TokenType::BitShiftRight) {
 
     switch (current_token->type) {
     case TokenType::BitShiftLeft:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftLeft, root,
-                                        parse_relational_expression(lexer));
+          parse_relational_expression(lexer));
       break;
 
     case TokenType::BitShiftRight:
       current_token = get_next_token(lexer);
       root = new_binary_expression_node(ASTNodeType::BitShiftRight, root,
-                                        parse_relational_expression(lexer));
+          parse_relational_expression(lexer));
       break;
 
     default:
@@ -524,8 +524,9 @@ ASTNode *parse_equality_expression(Lexer *lexer) {
 // 6.5.10 and-expr
 //          eq-expr
 //          and-expr & eq-expr
-ASTNode *parse_bitwise_and_expression(Lexer *lexer) {
-  ASTNode *root = parse_equality_expression(lexer);
+ASTNode* parse_bitwise_and_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_equality_expression(lexer);
 
   // while (get_next_token(lexer)->type == TokenType::Ampersand) {
   // get_next_token(lexer);
@@ -539,14 +540,15 @@ ASTNode *parse_bitwise_and_expression(Lexer *lexer) {
 // 6.5.11 xor-expr
 //          and-expr
 //          xor-expr ^ and-expr
-ASTNode *parse_bitwise_xor_expression(Lexer *lexer) {
+ASTNode* parse_bitwise_xor_expression(Lexer* lexer)
+{
 
-  ASTNode *root = parse_bitwise_and_expression(lexer);
+  ASTNode* root = parse_bitwise_and_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::Caret) {
     get_next_token(lexer);
     root = new_binary_expression_node(ASTNodeType::BitwiseXor, root,
-                                      parse_bitwise_and_expression(lexer));
+        parse_bitwise_and_expression(lexer));
   }
 
   return root;
@@ -555,13 +557,14 @@ ASTNode *parse_bitwise_xor_expression(Lexer *lexer) {
 // 6.5.12 or-expr
 //          xor-expr
 //          or-expr | xor-expr
-ASTNode *parse_bitwise_or_expression(Lexer *lexer) {
-  ASTNode *root = parse_bitwise_xor_expression(lexer);
+ASTNode* parse_bitwise_or_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_bitwise_xor_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::Pipe) {
     get_next_token(lexer);
     root = new_binary_expression_node(ASTNodeType::BitwiseOr, root,
-                                      parse_bitwise_xor_expression(lexer));
+        parse_bitwise_xor_expression(lexer));
   }
 
   return root;
@@ -570,13 +573,14 @@ ASTNode *parse_bitwise_or_expression(Lexer *lexer) {
 // 6.5.13 logical-and-expr
 //          inclusive-or-expr
 //          local-and-expr && inclusive-or
-ASTNode *parse_logical_and_expression(Lexer *lexer) {
-  ASTNode *root = parse_bitwise_or_expression(lexer);
+ASTNode* parse_logical_and_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_bitwise_or_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::LogicalAnd) {
     get_next_token(lexer);
     root = new_binary_expression_node(ASTNodeType::LogicalAnd, root,
-                                      parse_bitwise_or_expression(lexer));
+        parse_bitwise_or_expression(lexer));
   }
 
   return root;
@@ -585,13 +589,14 @@ ASTNode *parse_logical_and_expression(Lexer *lexer) {
 // 6.5.14 logical-or-expr
 //          logical-and-expr
 //          logical-or-expr || logical-and-expr
-ASTNode *parse_logical_or_expression(Lexer *lexer) {
-  ASTNode *root = parse_logical_and_expression(lexer);
+ASTNode* parse_logical_or_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_logical_and_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::LogicalOr) {
     get_next_token(lexer);
     root = new_binary_expression_node(ASTNodeType::LogicalOr, root,
-                                      parse_logical_and_expression(lexer));
+        parse_logical_and_expression(lexer));
   }
 
   return root;
@@ -606,13 +611,13 @@ ASTNode *parse_logical_or_expression(Lexer *lexer) {
 //          ?
 //       /  |   \
 // or-expr if  else
-ASTNode *parse_conditional_expression(Lexer *lexer) {
-  ASTNode *root = parse_logical_or_expression(lexer);
+ASTNode* parse_conditional_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_logical_or_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::QuestionMark) {
 
-    ASTNode *conditional_node =
-        new_ast_node(ASTNodeType::ConditionalExpression);
+    ASTNode* conditional_node = new_ast_node(ASTNodeType::ConditionalExpression);
     conditional_node->conditional = root;
     get_next_token(lexer);
 
@@ -633,19 +638,15 @@ ASTNode *parse_conditional_expression(Lexer *lexer) {
 // Assignment expression:
 //      conditional expression
 //      unary-expression assignment-operator assignment-expression
-static bool is_assignment_operator(Token *token) {
+static bool is_assignment_operator(Token* token)
+{
   TokenType t = token->type;
-  return (t == TokenType::Equals || t == TokenType::TimesEquals ||
-          t == TokenType::DividedByEquals || t == TokenType::ModuloEquals ||
-          t == TokenType::PlusEquals || t == TokenType::MinusEquals ||
-          t == TokenType::BitShiftLeftEquals ||
-          t == TokenType::BitShiftRightEquals ||
-          t == TokenType::BitwiseAndEquals || t == TokenType::XorEquals ||
-          t == TokenType::BitwiseOrEquals);
+  return (t == TokenType::Equals || t == TokenType::TimesEquals || t == TokenType::DividedByEquals || t == TokenType::ModuloEquals || t == TokenType::PlusEquals || t == TokenType::MinusEquals || t == TokenType::BitShiftLeftEquals || t == TokenType::BitShiftRightEquals || t == TokenType::BitwiseAndEquals || t == TokenType::XorEquals || t == TokenType::BitwiseOrEquals);
 }
 
-ASTNode *parse_assignment_expression(Lexer *lexer) {
-  ASTNode *root = parse_conditional_expression(lexer);
+ASTNode* parse_assignment_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_conditional_expression(lexer);
 
   while (is_assignment_operator(get_current_token(lexer))) {
     // FIXME:
@@ -659,8 +660,9 @@ ASTNode *parse_assignment_expression(Lexer *lexer) {
 // expression:
 //      assignment-expression
 //      expression, assignment-expression
-ASTNode *parse_expression(Lexer *lexer) {
-  ASTNode *root = parse_assignment_expression(lexer);
+ASTNode* parse_expression(Lexer* lexer)
+{
+  ASTNode* root = parse_assignment_expression(lexer);
 
   while (get_current_token(lexer)->type == TokenType::Comma) {
     // FIXME:
