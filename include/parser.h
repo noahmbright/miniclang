@@ -10,7 +10,7 @@
 struct ASTNode;
 
 struct Scope {
-  Scope *parent_scope;
+  Scope* parent_scope;
 
   std::unordered_set<std::string> variables;
   std::unordered_set<std::string> typedef_names;
@@ -52,8 +52,8 @@ enum class ASTNodeType {
 // functions or variables
 struct Object {
   std::string identifier;
-  const Type *type;
-  ASTNode *function_body;
+  Type const* type;
+  ASTNode* function_body;
 };
 
 struct ASTNode {
@@ -78,41 +78,52 @@ struct ASTNode {
 
   } data_as;
 
-  ASTNode *next;
-  ASTNode *lhs;
-  ASTNode *rhs;
+  ASTNode* next;
+  ASTNode* lhs;
+  ASTNode* rhs;
 
   // for ternary conditional
-  ASTNode *conditional;
+  ASTNode* conditional;
 
   // declarations/definitions
-  Object *object;
+  Object* object;
 };
 
-ASTNode *new_ast_node(ASTNodeType);
-bool expect_token_type(Token *, TokenType);
+enum class ExternalDeclarationType {
+  FunctionDefinition,
+  Declaration
+};
 
-const Type *declaration_to_fundamental_type(DeclarationSpecifierFlags *);
+struct ExternalDeclaration {
+  ExternalDeclaration* next;
+  ExternalDeclarationType type;
+  ASTNode* root_ast_node;
+};
+
+ASTNode* new_ast_node(ASTNodeType);
+bool expect_token_type(Token*, TokenType);
+
+Type const* declaration_to_fundamental_type(DeclarationSpecifierFlags*);
 
 // expressions
-ASTNode *parse_expression(Lexer *);
-ASTNode *parse_primary_expression(Lexer * /*, Scope *scope*/);
-ASTNode *parse_assignment_expression(Lexer * /*, Scope *scope*/);
+ASTNode* parse_expression(Lexer*);
+ASTNode* parse_primary_expression(Lexer* /*, Scope *scope*/);
+ASTNode* parse_assignment_expression(Lexer* /*, Scope *scope*/);
 
 // declarations
-bool token_is_declaration_specifier(const Token *, Scope *);
-ASTNode *parse_declaration(Lexer *, Scope *);
-Object *parse_declarator(Lexer *, const Type *, Scope *);
-ASTNode *parse_init_declarator(Lexer *);
-const Type *parse_pointer(Lexer *, const Type *);
+bool token_is_declaration_specifier(Token const*, Scope*);
+ASTNode* parse_declaration(Lexer*, Scope*);
+Object* parse_declarator(Lexer*, Type const*, Scope*);
+ASTNode* parse_init_declarator(Lexer*);
+Type const* parse_pointer(Lexer*, Type const*);
 
-ASTNode *parse_initializer(Lexer *);
-ASTNode *parse_initializer_list(Lexer *);
-DeclarationSpecifierFlags parse_declaration_specifiers(Lexer *, Scope *);
+ASTNode* parse_initializer(Lexer*);
+ASTNode* parse_initializer_list(Lexer*);
+DeclarationSpecifierFlags parse_declaration_specifiers(Lexer*, Scope*);
 
-void parse_rest_of_declaration(Lexer *, Scope *, ASTNode *);
+void parse_rest_of_declaration(Lexer*, Scope*, ASTNode*);
 
 // statements
-ASTNode *parse_statement(Lexer *lexer, Scope *scope);
+ASTNode* parse_statement(Lexer* lexer, Scope* scope);
 
-ASTNode *parse_translation_unit(const char *);
+ExternalDeclaration* parse_translation_unit(char const*);

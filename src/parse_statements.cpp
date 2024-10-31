@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "type.h"
+
 #include <cassert>
 
 ASTNode* parse_compound_statement(Lexer*, Scope*);
@@ -9,6 +10,17 @@ ASTNode* parse_expression_statement(Lexer*);
 ASTNode* parse_iteration_statement(Lexer*);
 ASTNode* parse_selection_statement(Lexer*);
 ASTNode* parse_labeled_statement(Lexer*);
+
+static ExternalDeclaration* new_external_declaration(ExternalDeclarationType type, ASTNode* head_node)
+{
+  ExternalDeclaration* new_ext_dec = (ExternalDeclaration*)malloc(sizeof(ExternalDeclaration*));
+
+  new_ext_dec->next = nullptr;
+  new_ext_dec->root_ast_node = head_node;
+  new_ext_dec->type = type;
+
+  return new_ext_dec;
+}
 
 Type const*
 declaration_to_fundamental_type(DeclarationSpecifierFlags* declaration)
@@ -145,10 +157,13 @@ ASTNode* parse_jump_statement(Lexer* lexer)
 // both start with declaration specifiers and declarators
 // if the declarator declares a function and is followed by a compound
 // statement, we have a function definition
-ASTNode* parse_translation_unit(char const* file)
+ExternalDeclaration* parse_translation_unit(char const* file)
 {
   Lexer lexer = new_lexer(file);
   Scope current_scope;
+
+  ExternalDeclaration declaration_anchor;
+  ExternalDeclaration* previous_declaration = &declaration_anchor;
 
   for (Token const* current_token = get_next_token(&lexer);
        current_token->type != TokenType::Eof;) {
@@ -159,18 +174,19 @@ ASTNode* parse_translation_unit(char const* file)
 
     // parse declaration specifiers and turn to type
     DeclarationSpecifierFlags declaration_specifiers = parse_declaration_specifiers(&lexer, &current_scope);
-
     Type const* fundamental_type_ptr = declaration_to_fundamental_type(&declaration_specifiers);
 
+    // prepare to parse declaration - overwrite declaration types if we find a function definition in the switch
     ASTNode* ast_node = new_ast_node(ASTNodeType::Declaration);
+    ExternalDeclarationType declaration_type = ExternalDeclarationType::Declaration;
+
     ast_node->object = parse_declarator(&lexer, fundamental_type_ptr, &current_scope);
 
     switch (ast_node->object->type->fundamental_type) {
-
     case FundamentalType::Function:
-      // if the current object is a function followed by a {, this is a function
-      // definition
+      // if the current object is a function followed by a {, this is a function definition
       if (get_current_token(&lexer)->type == TokenType::LBracket) {
+        declaration_type = ExternalDeclarationType::FunctionDefinition;
         ast_node->object->function_body = parse_compound_statement(&lexer, &current_scope);
         break;
       }
@@ -180,8 +196,10 @@ ASTNode* parse_translation_unit(char const* file)
       parse_rest_of_declaration(&lexer, &current_scope, ast_node);
     }
 
+    ExternalDeclaration* current_declaration = new_external_declaration(declaration_type, ast_node);
+    previous_declaration->next = current_declaration;
+    previous_declaration = previous_declaration->next;
   } // end for loop
 
-  // FIXME:
-  return nullptr;
+  return declaration_anchor.next;
 }

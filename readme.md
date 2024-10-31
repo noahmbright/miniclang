@@ -75,10 +75,18 @@ parenthesis around its parameter list followed by the curly braces for the body
 of the definition.
 
 Most of the parsing functions return `ASTNode`s, which I think of as roots of
-small abstract syntax trees. Something like `int x, int y = 3 + 4 * 5;` is
-parsed as a declaration. The returned `ASTNode` will represent the definition
-of `x`, and it will have a pointer `next` pointing to the declaration of `y`,
-with `lhs` and `rhs` recursively defining the expression `3 + 4 * 5`.
+small abstract syntax trees (as opposed to parsing the program and making _the_
+AST). Something like `int x, int y = 3 + 4 * 5;` is parsed as a declaration.
+The returned `ASTNode` will represent the definition of `x`, and it will have a
+pointer `next` pointing to the declaration of `y`, with `lhs` and `rhs`
+recursively defining the expression `3 + 4 * 5`.
+
+Because `next` in a declaration points to second identifier declared in a
+single line, it doesn't entirely make sense to have `next` point to the next
+declaration/function definition in a file. For this reason, the declarations in
+a translation unit are wrapped in an `ExternalDelaration` struct. Name is
+slightly funny but it's taken straight from 6.9 in the spec. This is a linked
+list of stuff to make global objects/procedures for in the codegen stage.
 
 ## Codegen
 
