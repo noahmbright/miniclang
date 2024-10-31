@@ -29,10 +29,17 @@ The parser is split into three files, `parse_expressions.cpp` and
 of the C specification, sections 6.5, 6.7, and 6.8. Expressions are where
 operator precedences are defined, and is the easiest section to map to academic
 resources on recursive descent parsing. This would be the best place to start
-in implementing a parser on your own. Parsing statements is relatively simple
-given other parts of the parser - this is where block statements (several
-statements wrapped in {}), and control flow are defined. Additionally, the 
-function for parsing an entire file is defined here.
+in implementing a parser on your own. Postfix operators also define things like
+function calls, array indexing and struct member access.
+
+Parsing statements is relatively simple given other parts of the parser - this
+is where block statements (several statements wrapped in {}), and control flow
+are defined. 
+
+In addition to 6.8 on statements, `parse_statements.cpp` also handles section
+6.9 on external definitions. This defines a translation unit, which is a `.c`
+file that has been preprocessed. Unless you're writing a preprocessor, a
+translation unit is just a file, as far as most people need to be concerned. 
 
 Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
 what ends up going into the AST.
@@ -53,6 +60,18 @@ to particular types, and pointers can point to pointers, so these are defined
 using linked lists to allow for sufficiently generic typing. A function pointer
 type is defined by its return type and parameter list types, e.g. you can have
 a pointer to a function that takes a `char` and returns an `int`.
+
+### Actually parsing a file
+
+Essentially the entry point to the compiler is the `parse_translation_unit`
+function. This spins up a lexer and begins producing an AST. A translation unit
+is a series of declarations or function definitions. Until you hit the `\0`
+character, just keep chomping away. 
+
+A C program is a series of declarations and function definitions, but this
+requires disambiguation. `int x;` is a declaration and `int x(){...}` is a
+function definition. A function definition has the parenthesis around its
+parameter list followed by the curly braces for the body of the definition.
 
 ## Codegen
 

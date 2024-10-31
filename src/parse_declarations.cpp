@@ -23,11 +23,11 @@ ASTNode *new_ast_node(ASTNodeType type = ASTNodeType::Void) {
   return new_node;
 }
 
-static const Object *new_object(const std::string &identifier,
-                                const Type *type) {
+static Object *new_object(const std::string &identifier, const Type *type) {
   Object *new_object = (Object *)malloc(sizeof(Object));
   new_object->identifier = identifier;
   new_object->type = type;
+  new_object->function_body = nullptr;
 
   return new_object;
 }
@@ -192,44 +192,52 @@ ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
   assert(token_is_declaration_specifier(get_current_token(lexer), scope) &&
          "parse_declaration: first token is not a declaration specifier");
 
-  ASTNode ast_node_anchor;
-  ast_node_anchor.next = nullptr;
-  ASTNode *previous_ast_node = &ast_node_anchor;
-
   // get the declspecs, e.g. the const int
   DeclarationSpecifierFlags declaration =
       parse_declaration_specifiers(lexer, scope);
 
-  // with the exception of maybe a parenthesized declarator, at this point we
-  // know we'll have a (array of/function returning/pointer to) const int
-  //
-  // we might also have a function like: const int* f(), so we'll ultimately
-  // want to return a declaration of a function with return type pointing to a
-  // pointer to int
-  //
-  // FIXME: Where do qualifiers like const go?
   FundamentalType fundamental_type =
       fundamental_type_from_declaration(&declaration);
+
   const Type *fundamental_type_ptr =
       get_fundamental_type_pointer(fundamental_type);
 
-  // now need to work through the declarators: pointers/arrays and any
-  // initializations, which will all have the same declspecs
-  bool already_parsed_first_declarator = false;
+  ASTNode *ast_node = new_ast_node(ASTNodeType::Declaration);
+  ast_node->object = parse_declarator(lexer, fundamental_type_ptr, scope);
+
+  parse_rest_of_declaration(lexer, scope, ast_node);
+
+  // skip semicolon
+  assert(get_current_token(lexer)->type == TokenType::Semicolon);
+  expect_and_get_next_token(lexer, TokenType::Semicolon,
+                            "Expected semicolon at end of declaration\n");
+  return ast_node;
+}
+
+// having this loop is useful in both parsing a normal declaration like above,
+// and in disambiguating function definitions and declarations
+// this appends declaration nodes to the head that is passed to it
+void parse_rest_of_declaration(Lexer *lexer, Scope *scope,
+                               ASTNode *head_ast_node) {
+  ASTNode *previous_ast_node = head_ast_node;
+
+  // if first declarator is initialized, process that
+  if (get_current_token(lexer)->type == TokenType::Equals) {
+    get_next_token(lexer);
+    parse_initializer(lexer);
+  }
+
   while (get_current_token(lexer)->type != TokenType::Semicolon) {
 
-    // check for commas after first declarator
-    if (already_parsed_first_declarator)
-      expect_and_get_next_token(
-          lexer, TokenType::Comma,
-          "Parsing declaration, expected comma or semicolon");
-    else
-      already_parsed_first_declarator = true;
+    // if not a semicolon, check for commas after first declarator
+    expect_and_get_next_token(
+        lexer, TokenType::Comma,
+        "Parsing declaration, expected comma or semicolon");
 
     // make new node with object from declarator
     ASTNode *current_ast_node = new_ast_node(ASTNodeType::Declaration);
     current_ast_node->object =
-        parse_declarator(lexer, fundamental_type_ptr, scope);
+        parse_declarator(lexer, head_ast_node->object->type, scope);
 
     // new identifier is explicitly initialized - get initializer
     if (get_current_token(lexer)->type == TokenType::Equals) {
@@ -240,12 +248,6 @@ ASTNode *parse_declaration(Lexer *lexer, Scope *scope) {
     previous_ast_node->next = current_ast_node;
     previous_ast_node = previous_ast_node->next;
   } // end while loop
-
-  // skip semicolon
-  assert(get_current_token(lexer)->type == TokenType::Semicolon);
-  expect_and_get_next_token(lexer, TokenType::Semicolon,
-                            "Expected semicolon at end of declaration\n");
-  return ast_node_anchor.next;
 }
 
 // 6.7.2 Structs, unions, enums
@@ -359,8 +361,7 @@ static const Type *parse_parameter_list(Lexer *lexer, const Type *return_type,
 //      of a certain type: variable, function, array/ptr
 //
 // declarator: pointer(opt) direct-declarator
-const Object *parse_declarator(Lexer *lexer, const Type *base_type,
-                               Scope *scope) {
+Object *parse_declarator(Lexer *lexer, const Type *base_type, Scope *scope) {
   // in `const int* const x;` we enter this function on the asterisk
   // in `int x;`              we enter on the x
 

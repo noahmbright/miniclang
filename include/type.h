@@ -5,15 +5,12 @@
 
 struct Type;
 
-struct Identifier {
-  std::string name;
-};
-
 struct FunctionParameter {
   const Type *parameter_type;
   FunctionParameter *next_parameter;
 };
 
+// a function type is defined by its parameters and return type
 struct FunctionData {
   const Type *return_type;
   const FunctionParameter *parameter_list;
@@ -53,6 +50,8 @@ enum class FundamentalType {
   Function
 };
 
+// these are defined so pointers/functions/arrays can point to a real C object
+// as return/base types
 extern const Type *const VoidType;
 extern const Type *const CharType;
 extern const Type *const SignedCharType;
@@ -80,18 +79,12 @@ extern const Type *const TypedefNameType;
 
 // a type name is a list of type specifiers/qualifiers and an optional abstract
 // declarator
-// i.e., a const *[]
+// i.e., a const int *[]
 struct Type {
   const FunctionData *function_data;
   const Type *pointed_type;
   FundamentalType fundamental_type;
   DeclarationSpecifierFlags declaration_specifier_flags;
-};
-
-// functions or variables
-struct Object {
-  std::string identifier;
-  const Type *type;
 };
 
 enum TypeModifierFlag {
