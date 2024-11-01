@@ -42,7 +42,6 @@ enum class ASTNodeType {
   If,
   Switch,
   For,
-  While,
 
   // declarations
   Declaration

@@ -148,9 +148,9 @@ struct Token {
 };
 
 struct Lexer {
-  const char *current_filepath;
-  const char *beginning_of_current_token;
-  const char *current_location;
+  char const* current_filepath;
+  char const* beginning_of_current_token;
+  char const* current_location;
 
   unsigned beginning_of_token_line;
   unsigned beginning_of_token_column;
@@ -161,15 +161,16 @@ struct Lexer {
   Token current_token;
 };
 
-Lexer new_lexer(const char *);
-void tokenize_char_ptr(const char *);
+Lexer new_lexer(char const*);
+void tokenize_char_ptr(char const*);
 Token make_token(TokenType, unsigned, unsigned, std::string = "");
-bool token_equals(const Token *, const Token *);
+bool token_equals(Token const*, Token const*);
 
-Token *get_current_token(Lexer *);
-const Token *get_next_token(Lexer *);
-Token error_token(Lexer *, const char *);
-void lexer_print_error_message(Lexer *, const char *);
-const Token *expect_and_get_next_token(Lexer *, TokenType, const char *);
+Token* get_current_token(Lexer*);
+Token const* get_next_token(Lexer*);
+Token error_token(Lexer*, char const*);
+void lexer_print_error_message(Lexer*, char const*);
+Token const* expect_next_token_and_skip(Lexer* lexer, TokenType type, char const*);
+Token const* expect_and_get_next_token(Lexer*, TokenType, char const*);
 
-bool token_is_integer_suffix(Token *);
+bool token_is_integer_suffix(Token*);

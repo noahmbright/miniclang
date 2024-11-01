@@ -64,9 +64,20 @@ void lexer_print_error_message(Lexer* lexer, char const* message)
   fprintf(stderr, "%s\n", message);
 }
 
-bool expect_token_type(Token* token, TokenType type)
+bool expect_token_type(Token const* token, TokenType type)
 {
   return token->type == type;
+}
+
+Token const* expect_next_token_and_skip(Lexer* lexer, TokenType type,
+    char const* error_message)
+{
+
+  if (expect_token_type(get_next_token(lexer), type))
+    return get_next_token(lexer);
+
+  lexer->current_token = error_token(lexer, error_message);
+  return &lexer->current_token;
 }
 
 Token const* expect_and_get_next_token(Lexer* lexer, TokenType type,

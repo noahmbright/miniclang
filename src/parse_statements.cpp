@@ -119,8 +119,7 @@ ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
     previous_ast_node = previous_ast_node->next;
   }
 
-  assert(get_current_token(lexer)->type == TokenType::RBrace);
-  get_next_token(lexer);
+  expect_and_get_next_token(lexer, TokenType::RBrace, "Expected closing brace after compound statement\n");
   return ast_node_anchor.next;
 }
 
@@ -145,11 +144,10 @@ ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 
   case TokenType::If: {
     ASTNode* ast_node = new_ast_node(ASTNodeType::If);
-    get_next_token(lexer);
-    expect_and_get_next_token(lexer, TokenType::LParen, "Expected parenthesis after if\n");
+    expect_next_token_and_skip(lexer, TokenType::LParen, "Expected parenthesis after if\n");
 
     ast_node->conditional = parse_expression(lexer, &current_scope);
-    expect_and_get_next_token(lexer, TokenType::LParen, "Expected closing parentheses after if condition\n");
+    expect_and_get_next_token(lexer, TokenType::RParen, "Expected closing parentheses after if condition\n");
 
     ast_node->lhs = parse_statement(lexer, scope);
 
@@ -163,10 +161,9 @@ ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 
   case TokenType::Switch: {
     ASTNode* ast_node = new_ast_node(ASTNodeType::Switch);
-    get_next_token(lexer);
-    expect_and_get_next_token(lexer, TokenType::LParen, "Expected parenthesis after switch\n");
+    expect_next_token_and_skip(lexer, TokenType::LParen, "Expected parenthesis after switch\n");
     ast_node->conditional = parse_expression(lexer, &current_scope);
-    expect_and_get_next_token(lexer, TokenType::LParen, "Expected closing parentheses after switch condition\n");
+    expect_and_get_next_token(lexer, TokenType::RParen, "Expected closing parentheses after switch condition\n");
 
     // FIXME: Switch statements
     return ast_node;
@@ -179,9 +176,74 @@ ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 // iteration statements are (do) while and for
 ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 {
-  (void)scope;
-  ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
-  get_current_token(lexer);
+  Scope current_scope = new_scope(scope);
+  ASTNode* ast_node = new_ast_node(ASTNodeType::For);
+
+  switch (get_current_token(lexer)->type) {
+    // while ( expression ) statement
+  case TokenType::While:
+
+    expect_next_token_and_skip(lexer, TokenType::LParen, "Expected parentheses after while\n");
+    ast_node->conditional = parse_expression(lexer, &current_scope);
+
+    expect_and_get_next_token(lexer, TokenType::RParen, "Expected closing parentheses after while condition\n");
+    ast_node->next = parse_statement(lexer, &current_scope);
+
+    return ast_node;
+
+  case TokenType::For:
+    // for (expression(opt); expression(opt); expression(opt)) statement OR
+    // for (declaration expression(opt); expression(opt)) statement
+    // the first is for when you declare a variable ahead of time and set it in the first expression, e.g.
+    //      int x;
+    //      for (x = 0; x<10; x++)
+    // the second is the typical for (int i = 0; i<10; i++)
+    expect_next_token_and_skip(lexer, TokenType::LParen, "Expected parentheses after for\n");
+
+    // first expression/declaration
+    if (token_is_declaration_specifier(get_current_token(lexer), &current_scope))
+      ast_node->lhs = parse_declaration(lexer, &current_scope);
+    else {
+      ast_node->lhs = parse_expression(lexer, &current_scope);
+      expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after for expression 1\n");
+    }
+
+    // condition
+    if (get_current_token(lexer)->type == TokenType::Semicolon)
+      expect_and_get_next_token(lexer, TokenType::Semicolon, "should be skipping semicolon for infinite for loop\n");
+    else {
+      ast_node->conditional = parse_expression(lexer, &current_scope);
+      expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after for condition\n");
+    }
+
+    // condition
+    if (get_current_token(lexer)->type == TokenType::RParen)
+      expect_and_get_next_token(lexer, TokenType::RParen, "should be skipping rparen with no increment in for\n");
+    else {
+      ast_node->rhs = parse_expression(lexer, &current_scope);
+      expect_and_get_next_token(lexer, TokenType::RParen, "Expected closing parenthesis after for loop\n");
+    }
+
+    ast_node->next = parse_statement(lexer, &current_scope);
+    return ast_node;
+
+  case TokenType::Do:
+    expect_and_get_next_token(lexer, TokenType::Do, "should be skipping do in do while\n");
+
+    ast_node->next = parse_statement(lexer, &current_scope);
+
+    expect_and_get_next_token(lexer, TokenType::While, "Expected while after statement in do while\n");
+    expect_and_get_next_token(lexer, TokenType::LParen, "Expected parentheses after while in do while\n");
+    ast_node->conditional = parse_expression(lexer, &current_scope);
+    expect_and_get_next_token(lexer, TokenType::RParen, "Expected closing parentheses after condition in do while\n");
+    expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after condition in do while\n");
+
+    return ast_node;
+
+  default:
+    assert(false && "Parsing iteration statement not starting with do/while/for");
+  }
+
   return ast_node;
 }
 
@@ -200,6 +262,7 @@ ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
   }
 
   case TokenType::Return: {
+    // FIXME return statements
     get_next_token(lexer);
     if (get_current_token(lexer)->type != TokenType::Semicolon) {
       ASTNode* return_value_node = parse_expression(lexer, scope);
