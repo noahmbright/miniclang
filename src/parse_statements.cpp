@@ -5,15 +5,15 @@
 #include <cassert>
 
 ASTNode* parse_compound_statement(Lexer*, Scope*);
-ASTNode* parse_jump_statement(Lexer*);
-ASTNode* parse_expression_statement(Lexer*);
-ASTNode* parse_iteration_statement(Lexer*);
-ASTNode* parse_selection_statement(Lexer*);
-ASTNode* parse_labeled_statement(Lexer*);
+ASTNode* parse_jump_statement(Lexer*, Scope*);
+ASTNode* parse_expression_statement(Lexer*, Scope*);
+ASTNode* parse_iteration_statement(Lexer*, Scope*);
+ASTNode* parse_selection_statement(Lexer*, Scope*);
+ASTNode* parse_labeled_statement(Lexer*, Scope*);
 
-static ExternalDeclaration* new_external_declaration(ExternalDeclarationType type, ASTNode* head_node)
+static ExternalDeclaration* new_external_declaration(ExternalDeclarationType type, ASTNode const* head_node)
 {
-  ExternalDeclaration* new_ext_dec = (ExternalDeclaration*)malloc(sizeof(ExternalDeclaration*));
+  ExternalDeclaration* new_ext_dec = (ExternalDeclaration*)malloc(sizeof(ExternalDeclaration));
 
   new_ext_dec->next = nullptr;
   new_ext_dec->root_ast_node = head_node;
@@ -46,28 +46,28 @@ ASTNode* parse_statement(Lexer* lexer, Scope* scope)
   case TokenType::Identifier:
   case TokenType::Case:
   case TokenType::Default:
-    return parse_labeled_statement(lexer);
+    return parse_labeled_statement(lexer, scope);
 
   case TokenType::LBrace:
     return parse_compound_statement(lexer, scope);
 
   case TokenType::If:
   case TokenType::Switch:
-    return parse_selection_statement(lexer);
+    return parse_selection_statement(lexer, scope);
 
   case TokenType::While:
   case TokenType::For:
   case TokenType::Do:
-    return parse_iteration_statement(lexer);
+    return parse_iteration_statement(lexer, scope);
 
   case TokenType::GoTo:
   case TokenType::Continue:
   case TokenType::Break:
   case TokenType::Return:
-    return parse_jump_statement(lexer);
+    return parse_jump_statement(lexer, scope);
 
   default:
-    return parse_expression_statement(lexer);
+    return parse_expression_statement(lexer, scope);
   }
 
   return ast_node;
@@ -77,8 +77,9 @@ ASTNode* parse_statement(Lexer* lexer, Scope* scope)
 //      identifier : statement for use with goto
 //      case const-expression : statement
 //      default : statement
-ASTNode* parse_labeled_statement(Lexer* lexer)
+ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
 {
+  (void)scope;
   ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
   get_current_token(lexer);
   return ast_node;
@@ -115,34 +116,64 @@ ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
 }
 
 // expression statements are expr(opt);
-ASTNode* parse_expression_statement(Lexer* lexer)
+ASTNode* parse_expression_statement(Lexer* lexer, Scope* scope)
 {
+  (void)scope;
   ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
   get_current_token(lexer);
   return ast_node;
 }
 
 // selection statements are ifs/switches
-ASTNode* parse_selection_statement(Lexer* lexer)
+ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 {
+  (void)scope;
   ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
   get_current_token(lexer);
   return ast_node;
 }
 
 // iteration statements are (do) while and for
-ASTNode* parse_iteration_statement(Lexer* lexer)
+ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 {
+  (void)scope;
   ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
   get_current_token(lexer);
   return ast_node;
 }
 
 // jumps are goto identifier; continue; break; return;
-ASTNode* parse_jump_statement(Lexer* lexer)
+ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
 {
+  // FIXME: jump statement semantics
   ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
-  get_current_token(lexer);
+  switch (get_current_token(lexer)->type) {
+    get_next_token(lexer);
+
+  case TokenType::GoTo: {
+    Token const* identifier_token = get_current_token(lexer);
+    if (identifier_token->type != TokenType::Identifier)
+      error_token(lexer, "Expected identifier after goto\n");
+  }
+
+  case TokenType::Return: {
+    get_next_token(lexer);
+    if (get_current_token(lexer)->type != TokenType::Semicolon) {
+      ASTNode* return_value_node = parse_expression(lexer, scope);
+      ast_node->rhs = return_value_node;
+    }
+  }
+
+  case TokenType::Continue:
+  case TokenType::Break:
+    expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after jump statement\n");
+    break;
+
+  default:
+    assert(false);
+    break;
+  }
+
   return ast_node;
 }
 
@@ -161,12 +192,15 @@ ExternalDeclaration* parse_translation_unit(char const* file)
 {
   Lexer lexer = new_lexer(file);
   Scope current_scope;
+  current_scope.parent_scope = nullptr;
 
   ExternalDeclaration declaration_anchor;
+  declaration_anchor.next = nullptr;
+  declaration_anchor.root_ast_node = nullptr;
   ExternalDeclaration* previous_declaration = &declaration_anchor;
 
-  for (Token const* current_token = get_next_token(&lexer);
-       current_token->type != TokenType::Eof;) {
+  for (get_next_token(&lexer);
+       get_current_token(&lexer)->type != TokenType::Eof;) {
 
     if (!token_is_declaration_specifier(get_current_token(&lexer),
             &current_scope))
@@ -185,7 +219,7 @@ ExternalDeclaration* parse_translation_unit(char const* file)
     switch (ast_node->object->type->fundamental_type) {
     case FundamentalType::Function:
       // if the current object is a function followed by a {, this is a function definition
-      if (get_current_token(&lexer)->type == TokenType::LBracket) {
+      if (get_current_token(&lexer)->type == TokenType::LBrace) {
         declaration_type = ExternalDeclarationType::FunctionDefinition;
         ast_node->object->function_body = parse_compound_statement(&lexer, &current_scope);
         break;
@@ -198,7 +232,7 @@ ExternalDeclaration* parse_translation_unit(char const* file)
 
     ExternalDeclaration* current_declaration = new_external_declaration(declaration_type, ast_node);
     previous_declaration->next = current_declaration;
-    previous_declaration = previous_declaration->next;
+    previous_declaration = current_declaration;
   } // end for loop
 
   return declaration_anchor.next;

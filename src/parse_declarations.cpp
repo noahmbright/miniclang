@@ -57,16 +57,17 @@ static FunctionParameter* new_function_parameter(Type const* parameter_type)
   return new_parameter;
 }
 
-/*static bool variable_in_scope(std::string variable_name, Scope *scope) {
+Object* variable_in_scope(std::string const& variable_name, Scope* scope)
+{
 
-  for (Scope *current_scope = scope; current_scope != nullptr;
+  for (Scope* current_scope = scope; current_scope != nullptr;
        current_scope = current_scope->parent_scope)
 
     if (current_scope->variables.contains(variable_name))
-      return true;
+      return current_scope->variables[variable_name];
 
-  return false;
-}*/
+  return nullptr;
+}
 
 static bool typedef_name_in_scope(std::string const& type_name, Scope* scope)
 {
@@ -209,13 +210,10 @@ ASTNode* parse_declaration(Lexer* lexer, Scope* scope)
 
   ASTNode* ast_node = new_ast_node(ASTNodeType::Declaration);
   ast_node->object = parse_declarator(lexer, fundamental_type_ptr, scope);
+  scope->variables[ast_node->object->identifier] = ast_node->object;
 
   parse_rest_of_declaration(lexer, scope, ast_node);
 
-  // skip semicolon
-  assert(get_current_token(lexer)->type == TokenType::Semicolon);
-  expect_and_get_next_token(lexer, TokenType::Semicolon,
-      "Expected semicolon at end of declaration\n");
   return ast_node;
 }
 
@@ -230,7 +228,7 @@ void parse_rest_of_declaration(Lexer* lexer, Scope* scope,
   // if first declarator is initialized, process that
   if (get_current_token(lexer)->type == TokenType::Equals) {
     get_next_token(lexer);
-    parse_initializer(lexer);
+    parse_initializer(lexer, scope);
   }
 
   while (get_current_token(lexer)->type != TokenType::Semicolon) {
@@ -243,16 +241,21 @@ void parse_rest_of_declaration(Lexer* lexer, Scope* scope,
     // make new node with object from declarator
     ASTNode* current_ast_node = new_ast_node(ASTNodeType::Declaration);
     current_ast_node->object = parse_declarator(lexer, head_ast_node->object->type, scope);
+    scope->variables[current_ast_node->object->identifier] = current_ast_node->object;
 
     // new identifier is explicitly initialized - get initializer
     if (get_current_token(lexer)->type == TokenType::Equals) {
       get_next_token(lexer);
-      parse_initializer(lexer);
+      parse_initializer(lexer, scope);
     }
 
     previous_ast_node->next = current_ast_node;
     previous_ast_node = previous_ast_node->next;
   } // end while loop
+
+  // skip semicolon
+  expect_and_get_next_token(lexer, TokenType::Semicolon,
+      "Expected semicolon at end of declaration\n");
 }
 
 // 6.7.2 Structs, unions, enums
@@ -380,8 +383,7 @@ Object* parse_declarator(Lexer* lexer, Type const* base_type, Scope* scope)
     return_type = parse_pointer(lexer, return_type);
   }
 
-  // after checking for pointer types, a declarator needs to specify an
-  // identifier
+  // after checking for pointer types, a declarator needs to specify an identifier
   Token const* identifier_token = get_current_token(lexer);
   std::string const identifier = identifier_token->string;
 
@@ -395,7 +397,7 @@ Object* parse_declarator(Lexer* lexer, Type const* base_type, Scope* scope)
   if (get_current_token(lexer)->type == TokenType::LParen)
     return_type = parse_parameter_list(lexer, return_type, scope);
 
-  if (get_current_token(lexer)->type == TokenType::LBracket)
+  else if (get_current_token(lexer)->type == TokenType::LBracket)
     return_type = parse_array_dimensions(lexer);
 
   return new_object(identifier, return_type);
@@ -524,13 +526,13 @@ DeclarationSpecifierFlags parse_specifier_qualifier_list(Lexer* lexer,
 //      assignment-expression
 //      { initializer-list }
 //      { initializer-list, }
-ASTNode* parse_initializer(Lexer* lexer)
+ASTNode* parse_initializer(Lexer* lexer, Scope* scope)
 {
 
   // { initializer list }
   if (get_current_token(lexer)->type == TokenType::LBracket) {
     get_next_token(lexer);
-    parse_initializer_list(lexer);
+    parse_initializer_list(lexer, scope);
 
     // skip potential comma
     if (get_current_token(lexer)->type == TokenType::Comma)
@@ -542,14 +544,14 @@ ASTNode* parse_initializer(Lexer* lexer)
   }
 
   // simple assignment expresion
-  return parse_assignment_expression(lexer);
+  return parse_assignment_expression(lexer, scope);
 }
 
 // initializer-list:
 //      designation(optional) initializer
 //      initializer-list, designation(optional) initializer
 //
-ASTNode* parse_initializer_list(Lexer* lexer)
+ASTNode* parse_initializer_list(Lexer* lexer, Scope* scope)
 {
 
   // FIXME: struct initializers
@@ -570,7 +572,7 @@ ASTNode* parse_initializer_list(Lexer* lexer)
     (void)identifier;
   }
 
-  return parse_initializer(lexer);
+  return parse_initializer(lexer, scope);
 }
 
 // designation:

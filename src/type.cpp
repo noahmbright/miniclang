@@ -204,7 +204,7 @@ fundamental_type_from_declaration(DeclarationSpecifierFlags* declaration)
 
   // the first 13 types in TypeSpecifierFlag enum are type specifiers
   // 13 consecutive 1s in hex is 0x1fff
-  int declaration_type_as_int = declaration->flags & 0xfff;
+  int declaration_type_as_int = declaration->flags & 0x1fff;
 
   switch (declaration_type_as_int) {
   case 0:

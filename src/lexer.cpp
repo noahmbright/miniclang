@@ -748,7 +748,7 @@ Token lex_next_token(Lexer* lexer)
       return token_from_keyword_or_identifier(lexer, TokenType::Register,
           "register");
     case 't':
-      return token_from_keyword_or_identifier(lexer, TokenType::Register,
+      return token_from_keyword_or_identifier(lexer, TokenType::Return,
           "return");
     case 's':
       return token_from_keyword_or_identifier(lexer, TokenType::Restrict,
