@@ -198,15 +198,11 @@ DeclarationSpecifierFlags parse_declaration_specifiers(Lexer* lexer,
 // handle this by producing a linked list of AST nodes
 ASTNode* parse_declaration(Lexer* lexer, Scope* scope)
 {
-
   assert(token_is_declaration_specifier(get_current_token(lexer), scope) && "parse_declaration: first token is not a declaration specifier");
 
   // get the declspecs, e.g. the const int
   DeclarationSpecifierFlags declaration = parse_declaration_specifiers(lexer, scope);
-
-  FundamentalType fundamental_type = fundamental_type_from_declaration(&declaration);
-
-  Type const* fundamental_type_ptr = get_fundamental_type_pointer(fundamental_type);
+  Type const* fundamental_type_ptr = declaration_to_fundamental_type(&declaration);
 
   ASTNode* ast_node = new_ast_node(ASTNodeType::Declaration);
   ast_node->object = parse_declarator(lexer, fundamental_type_ptr, scope);

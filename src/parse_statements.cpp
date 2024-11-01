@@ -4,6 +4,13 @@
 
 #include <cassert>
 
+Scope new_scope(Scope* parent_scope)
+{
+  Scope current_scope;
+  current_scope.parent_scope = parent_scope;
+  return current_scope;
+}
+
 ASTNode* parse_compound_statement(Lexer*, Scope*);
 ASTNode* parse_jump_statement(Lexer*, Scope*);
 ASTNode* parse_expression_statement(Lexer*, Scope*);
@@ -91,6 +98,8 @@ ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
 // compound-statement: ( declaration | statement )*
 ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
 {
+  Scope current_scope = new_scope(scope);
+
   assert(get_current_token(lexer)->type == TokenType::LBrace);
   get_next_token(lexer);
 
@@ -101,10 +110,10 @@ ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
   while (get_current_token(lexer)->type != TokenType::RBrace) {
 
     ASTNode* current_ast_node;
-    if (token_is_declaration_specifier(get_current_token(lexer), scope))
-      current_ast_node = parse_declaration(lexer, scope);
+    if (token_is_declaration_specifier(get_current_token(lexer), &current_scope))
+      current_ast_node = parse_declaration(lexer, &current_scope);
     else
-      current_ast_node = parse_statement(lexer, scope);
+      current_ast_node = parse_statement(lexer, &current_scope);
 
     previous_ast_node->next = current_ast_node;
     previous_ast_node = previous_ast_node->next;
@@ -125,12 +134,46 @@ ASTNode* parse_expression_statement(Lexer* lexer, Scope* scope)
 }
 
 // selection statements are ifs/switches
+// if ( expression ) statement
+// if ( expression ) statement else statement
+// switch ( expression ) statement
 ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 {
-  (void)scope;
-  ASTNode* ast_node = new_ast_node(ASTNodeType::Void);
-  get_current_token(lexer);
-  return ast_node;
+  Scope current_scope = new_scope(scope);
+
+  switch (get_current_token(lexer)->type) {
+
+  case TokenType::If: {
+    ASTNode* ast_node = new_ast_node(ASTNodeType::If);
+    get_next_token(lexer);
+    expect_and_get_next_token(lexer, TokenType::LParen, "Expected parenthesis after if\n");
+
+    ast_node->conditional = parse_expression(lexer, &current_scope);
+    expect_and_get_next_token(lexer, TokenType::LParen, "Expected closing parentheses after if condition\n");
+
+    ast_node->lhs = parse_statement(lexer, scope);
+
+    if (get_current_token(lexer)->type == TokenType::Else) {
+      get_next_token(lexer);
+      ast_node->rhs = parse_statement(lexer, &current_scope);
+    }
+
+    return ast_node;
+  }
+
+  case TokenType::Switch: {
+    ASTNode* ast_node = new_ast_node(ASTNodeType::Switch);
+    get_next_token(lexer);
+    expect_and_get_next_token(lexer, TokenType::LParen, "Expected parenthesis after switch\n");
+    ast_node->conditional = parse_expression(lexer, &current_scope);
+    expect_and_get_next_token(lexer, TokenType::LParen, "Expected closing parentheses after switch condition\n");
+
+    // FIXME: Switch statements
+    return ast_node;
+  }
+  default:
+    assert(false && "parsing selection statement not beginning with switch or if\n");
+  }
 }
 
 // iteration statements are (do) while and for

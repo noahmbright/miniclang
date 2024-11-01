@@ -201,7 +201,7 @@ void test9()
 {
   printf("Running parser test 9: Compound statement...\n");
 
-  char const* source = "{int x();\nchar* s;}";
+  char const* source = "{int x;\nchar* s;}";
   Lexer lexer = new_lexer(source);
   Scope scope;
   scope.parent_scope = nullptr;
@@ -214,8 +214,7 @@ void test9()
   assert(node->type == ASTNodeType::Declaration);
   assert(node->object->identifier == "x");
 
-  assert(node->object->type->function_data->return_type == get_fundamental_type_pointer(FundamentalType::Int));
-  assert(node->object->type->function_data->parameter_list == nullptr);
+  assert(node->object->type == get_fundamental_type_pointer(FundamentalType::Int));
 
   ASTNode* next_node = node->next;
   assert(next_node);

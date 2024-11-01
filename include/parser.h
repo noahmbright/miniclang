@@ -38,6 +38,12 @@ enum class ASTNodeType {
   ConditionalExpression,
   Assignment,
 
+  // control flow
+  If,
+  Switch,
+  For,
+  While,
+
   // declarations
   Declaration
 };
