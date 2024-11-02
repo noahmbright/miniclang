@@ -41,15 +41,31 @@ In addition to 6.8 on statements, `parse_statements.cpp` also handles section
 file that has been preprocessed. Unless you're writing a preprocessor, a
 translation unit is just a file, as far as most people need to be concerned. 
 
-Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
-what ends up going into the AST.
-
 ### Parsing declarations
 
-Parsing declarations is more complicated. A declaration is something like `int
-x, y[] = {1,2,}`. This involves sorting out type information, propagating it
-forward appropriately, parsing initializers, and figuring out how to represent
-this all in an AST.
+Parsing declarations is more complicated than parsing expressions. A
+declaration is something like `int x, y[] = {1,2,}`. This involves sorting out
+type information, propagating it forward appropriately, parsing initializers,
+and figuring out how to represent this all in an AST.
+
+### Scope
+
+The parser initially checks for syntax errors only. It will accept undefined
+variables or typedefs. These are checked in a subsequent semantic analysis
+pass. This is more like clang than chibicc. Chibicc parses translation units
+and loops over typedefs, global variable declarations and function definitions.
+Here, we loop over global variables and function definitions only. See
+[Actually parsing a file](#actually-parsing-a-file). 
+
+This approach to variable references is reflected in how scopes are handled.
+Scopes are linked lists, with their pointers their parent scopes. Scopes also
+contain hashmaps mapping strings to `Object*`s, the string containing
+identifier names. Declarations will populate a scope with identifiers and
+typedef names. `ASTNodes` all contain pointers to these scopes. References to
+these declarations are resolved when walking the AST.
+
+Knowing that we are targeting LLVM IR informs decisions made in parsing, and 
+what ends up going into the AST.
 
 ### Parsing Types
 

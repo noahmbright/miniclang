@@ -20,6 +20,7 @@ file(GLOB_RECURSE SOURCE_FILES
 	${CMAKE_SOURCE_DIR}/src/parse_expressions.cpp
 	${CMAKE_SOURCE_DIR}/src/parse_statements.cpp
 	${CMAKE_SOURCE_DIR}/src/parse_declarations.cpp
+	${CMAKE_SOURCE_DIR}/src/codegen.cpp
 	${CMAKE_SOURCE_DIR}/src/type.cpp
 )
 

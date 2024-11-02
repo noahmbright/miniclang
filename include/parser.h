@@ -14,7 +14,7 @@ enum class ASTNodeType {
 
   // primary expressions
   NumericConstant,
-  Variable,
+  VariableReference,
 
   // binary expressions
   Multiplication,
@@ -54,8 +54,15 @@ struct Object {
   ASTNode* function_body;
 };
 
+struct Scope {
+  Scope* parent_scope;
+  std::unordered_map<std::string, Object*> variables;
+  std::unordered_map<std::string, Object*> typedef_names;
+};
+
 struct ASTNode {
   ASTNodeType type;
+  Scope* scope;
 
   FundamentalType data_type;
 
@@ -85,18 +92,12 @@ struct ASTNode {
 
   // declarations/definitions
   Object* object;
+
+  // variable references
+  std::string referenced_variable;
 };
 
-struct Scope {
-  Scope* parent_scope;
-  std::unordered_map<std::string, Object*> variables;
-  std::unordered_map<std::string, Object*> typedef_names;
-};
-
-enum class ExternalDeclarationType {
-  FunctionDefinition,
-  Declaration
-};
+enum class ExternalDeclarationType { FunctionDefinition, Declaration };
 
 struct ExternalDeclaration {
   ExternalDeclaration* next;
@@ -104,7 +105,7 @@ struct ExternalDeclaration {
   ASTNode const* root_ast_node;
 };
 
-ASTNode* new_ast_node(ASTNodeType);
+ASTNode* new_ast_node(Scope*, ASTNodeType);
 bool expect_token_type(Token*, TokenType);
 
 Type const* declaration_to_fundamental_type(DeclarationSpecifierFlags*);

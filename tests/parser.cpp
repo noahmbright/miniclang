@@ -139,8 +139,7 @@ void test6()
   assert(node->object->identifier == "x");
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
-  fprintf(stderr,
-      "FIXME: Parse initializers, data structure for initializers\n\n");
+  fprintf(stderr, "FIXME: Parse initializers, data structure for initializers\n\n");
   // printf("test 6 passed\n\n");
 }
 
@@ -246,8 +245,7 @@ void test10()
   assert(node->object->identifier == "x");
   assert(get_current_token(&lexer)->type == TokenType::Eof);
 
-  fprintf(stderr,
-      "FIXME: Parse initializers, data structure for initializers\n\n");
+  fprintf(stderr, "FIXME: Parse initializers, data structure for initializers\n\n");
   // printf("test 10 passed\n\n");
 }
 
