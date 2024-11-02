@@ -47,11 +47,13 @@ static FunctionData const* new_function_data(Type const* return_type, FunctionPa
   return new_function_type;
 }
 
-static FunctionParameter* new_function_parameter(Type const* parameter_type)
+static FunctionParameter* new_function_parameter(Type const* parameter_type, std::string const& identifier)
 {
   FunctionParameter* new_parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
 
   new_parameter->parameter_type = parameter_type;
+  new_parameter->next_parameter = nullptr;
+  new_parameter->identifier = identifier;
 
   return new_parameter;
 }
@@ -311,12 +313,15 @@ static Type const* parse_parameter_list(Lexer* lexer, Type const* return_type, S
       parameter_type = parse_pointer(lexer, parameter_type);
 
     // potentially has an identifier, skip
-    if (get_current_token(lexer)->type == TokenType::Identifier)
+    std::string identifier;
+    if (get_current_token(lexer)->type == TokenType::Identifier) {
+      identifier = get_current_token(lexer)->string;
       get_next_token(lexer);
+    }
 
     // FIXME: finally either a function pointer or array parameter
 
-    FunctionParameter* current_function_parameter = new_function_parameter(parameter_type);
+    FunctionParameter* current_function_parameter = new_function_parameter(parameter_type, identifier);
 
     previous_parameter->next_parameter = current_function_parameter;
     previous_parameter = previous_parameter->next_parameter;

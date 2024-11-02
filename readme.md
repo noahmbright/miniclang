@@ -70,12 +70,12 @@ what ends up going into the AST.
 ### Parsing Types
 
 C is statically typed, meaning that our AST needs a way to represent data types
-for use during static analysis. There are fundamental types such as `int` and 
-`char`, but also pointer, function, array, and user defined types. Pointers point
-to particular types, and pointers can point to pointers, so these are defined 
-using linked lists to allow for sufficiently generic typing. A function pointer
-type is defined by its return type and parameter list types, e.g. you can have
-a pointer to a function that takes a `char` and returns an `int`.
+for use during static analysis. There are fundamental types such as `int` and
+`char`, but also pointer, function, array, and user defined types. Pointers
+point to particular types, and pointers can point to pointers, so these are
+defined using linked lists to allow for sufficiently generic typing. In both C
+and LLVM, a function type is defined by its return type and parameter list
+types, e.g. you can have a function that takes a `char` and returns an `int`.
 
 ### Actually parsing a file
 

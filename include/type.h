@@ -1,19 +1,19 @@
 #pragma once
 
 #include "lexer.h"
-#include <string>
 
 struct Type;
 
 struct FunctionParameter {
-  const Type *parameter_type;
-  FunctionParameter *next_parameter;
+  Type const* parameter_type;
+  std::string identifier;
+  FunctionParameter* next_parameter;
 };
 
 // a function type is defined by its parameters and return type
 struct FunctionData {
-  const Type *return_type;
-  const FunctionParameter *parameter_list;
+  Type const* return_type;
+  FunctionParameter const* parameter_list;
   bool is_variadic;
 };
 
@@ -52,37 +52,37 @@ enum class FundamentalType {
 
 // these are defined so pointers/functions/arrays can point to a real C object
 // as return/base types
-extern const Type *const VoidType;
-extern const Type *const CharType;
-extern const Type *const SignedCharType;
-extern const Type *const UnsignedCharType;
-extern const Type *const ShortType;
-extern const Type *const UnsignedShortType;
-extern const Type *const IntType;
-extern const Type *const UnsignedIntType;
-extern const Type *const LongType;
-extern const Type *const UnsignedLongType;
-extern const Type *const LongLongType;
-extern const Type *const UnsignedLongLongType;
-extern const Type *const FloatType;
-extern const Type *const DoubleType;
-extern const Type *const LongDoubleType;
-extern const Type *const FloatComplexType;
-extern const Type *const DoubleComplexType;
-extern const Type *const LongDoubleComplexType;
-extern const Type *const BoolType;
-extern const Type *const StructType;
-extern const Type *const UnionType;
-extern const Type *const EnumType;
-extern const Type *const EnumeratedValueType;
-extern const Type *const TypedefNameType;
+extern Type const* const VoidType;
+extern Type const* const CharType;
+extern Type const* const SignedCharType;
+extern Type const* const UnsignedCharType;
+extern Type const* const ShortType;
+extern Type const* const UnsignedShortType;
+extern Type const* const IntType;
+extern Type const* const UnsignedIntType;
+extern Type const* const LongType;
+extern Type const* const UnsignedLongType;
+extern Type const* const LongLongType;
+extern Type const* const UnsignedLongLongType;
+extern Type const* const FloatType;
+extern Type const* const DoubleType;
+extern Type const* const LongDoubleType;
+extern Type const* const FloatComplexType;
+extern Type const* const DoubleComplexType;
+extern Type const* const LongDoubleComplexType;
+extern Type const* const BoolType;
+extern Type const* const StructType;
+extern Type const* const UnionType;
+extern Type const* const EnumType;
+extern Type const* const EnumeratedValueType;
+extern Type const* const TypedefNameType;
 
 // a type name is a list of type specifiers/qualifiers and an optional abstract
 // declarator
 // i.e., a const int *[]
 struct Type {
-  const FunctionData *function_data;
-  const Type *pointed_type;
+  FunctionData const* function_data;
+  Type const* pointed_type;
   FundamentalType fundamental_type;
   DeclarationSpecifierFlags declaration_specifier_flags;
 };
@@ -128,14 +128,13 @@ enum TypeModifierFlag {
   Enum = 1 << 27
 };
 
-void update_declaration_specifiers(const Token *, DeclarationSpecifierFlags *);
-FundamentalType
-fundamental_type_from_declaration(DeclarationSpecifierFlags *declaration);
+void update_declaration_specifiers(Token const*, DeclarationSpecifierFlags*);
+FundamentalType fundamental_type_from_declaration(DeclarationSpecifierFlags* declaration);
 
-Type *new_type(FundamentalType, Type * = nullptr);
-Type *fundamental_type(FundamentalType);
+Type* new_type(FundamentalType, Type* = nullptr);
+Type* fundamental_type(FundamentalType);
 
 bool is_arithmetic_type(FundamentalType t);
 bool is_integer_type(FundamentalType t);
 bool is_floating_type(FundamentalType t);
-const Type *get_fundamental_type_pointer(FundamentalType);
+Type const* get_fundamental_type_pointer(FundamentalType);

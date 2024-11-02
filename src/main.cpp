@@ -1,3 +1,6 @@
+#include "codegen.h"
+#include "parser.h"
+
 #include <cstdlib>
 #include <stdio.h>
 #include <unistd.h>
@@ -36,7 +39,16 @@ int main(int argc, char** argv)
   for (int i = 1; i < argc; i++) {
     if (access(argv[i], F_OK) == 0) {
       char* buffer = read_file(argv[i]);
-      (void)buffer;
+
+      std::string outfile_name;
+      for (char const* s = argv[i]; *s != '.' && *s != '\0'; s++)
+        outfile_name.push_back(*s);
+      outfile_name += ".ll";
+
+      FILE* outfile = fopen(outfile_name.c_str(), "w");
+
+      ExternalDeclaration* external_declarations = parse_translation_unit(buffer);
+      emit_llvm_from_translation_unit(external_declarations, outfile);
     } else {
       fprintf(stderr, "File %s not found, aborting.\n", argv[i]);
     }
