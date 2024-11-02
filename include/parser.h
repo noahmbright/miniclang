@@ -87,7 +87,7 @@ struct ASTNode {
   ASTNode* lhs;
   ASTNode* rhs;
 
-  // for ternary conditional
+  // for ternary conditional, while, for and if
   ASTNode* conditional;
 
   // declarations/definitions

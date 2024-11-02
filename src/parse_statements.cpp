@@ -13,12 +13,12 @@ Scope* new_scope(Scope* parent_scope)
   return current_scope;
 }
 
-ASTNode* parse_compound_statement(Lexer*, Scope*);
-ASTNode* parse_jump_statement(Lexer*, Scope*);
-ASTNode* parse_expression_statement(Lexer*, Scope*);
-ASTNode* parse_iteration_statement(Lexer*, Scope*);
-ASTNode* parse_selection_statement(Lexer*, Scope*);
-ASTNode* parse_labeled_statement(Lexer*, Scope*);
+static ASTNode* parse_compound_statement(Lexer*, Scope*);
+static ASTNode* parse_jump_statement(Lexer*, Scope*);
+static ASTNode* parse_expression_statement(Lexer*, Scope*);
+static ASTNode* parse_iteration_statement(Lexer*, Scope*);
+static ASTNode* parse_selection_statement(Lexer*, Scope*);
+static ASTNode* parse_labeled_statement(Lexer*, Scope*);
 
 static ExternalDeclaration* new_external_declaration(ExternalDeclarationType type, ASTNode const* head_node)
 {
@@ -85,7 +85,7 @@ ASTNode* parse_statement(Lexer* lexer, Scope* scope)
 //      identifier : statement for use with goto
 //      case const-expression : statement
 //      default : statement
-ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
 {
   (void)scope;
   ASTNode* ast_node = new_ast_node(scope, ASTNodeType::Void);
@@ -97,7 +97,7 @@ ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
 // {}, for use in basically everything, e.g. for loops
 //
 // compound-statement: ( declaration | statement )*
-ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
 {
   Scope* current_scope = new_scope(scope);
 
@@ -126,18 +126,23 @@ ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
 }
 
 // expression statements are expr(opt);
-ASTNode* parse_expression_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_expression_statement(Lexer* lexer, Scope* scope)
 {
-  ASTNode* ast_node = new_ast_node(scope, ASTNodeType::Void);
-  get_current_token(lexer);
-  return ast_node;
+  if (get_current_token(lexer)->type == TokenType::Semicolon) {
+    expect_and_get_next_token(lexer, TokenType::Semicolon, "Should be skipping semicolon");
+    return new_ast_node(scope, ASTNodeType::Void);
+  }
+
+  ASTNode* expression = parse_expression(lexer, scope);
+  expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after expression\n");
+  return expression;
 }
 
 // selection statements are ifs/switches
 // if ( expression ) statement
 // if ( expression ) statement else statement
 // switch ( expression ) statement
-ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 {
   Scope* current_scope = new_scope(scope);
 
@@ -175,7 +180,7 @@ ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 }
 
 // iteration statements are (do) while and for
-ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 {
   Scope* current_scope = new_scope(scope);
   ASTNode* ast_node = new_ast_node(current_scope, ASTNodeType::For);
@@ -249,7 +254,7 @@ ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 }
 
 // jumps are goto identifier; continue; break; return;
-ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
 {
   // FIXME: jump statement semantics
   ASTNode* ast_node = new_ast_node(scope, ASTNodeType::Void);
