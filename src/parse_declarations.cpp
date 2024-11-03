@@ -216,7 +216,7 @@ void parse_rest_of_declaration(Lexer* lexer, Scope* scope, ASTNode* head_ast_nod
   // if first declarator is initialized, process that
   if (get_current_token(lexer)->type == TokenType::Equals) {
     get_next_token(lexer);
-    parse_initializer(lexer, scope);
+    head_ast_node->rhs = parse_initializer(lexer, scope);
   }
 
   while (get_current_token(lexer)->type != TokenType::Semicolon) {

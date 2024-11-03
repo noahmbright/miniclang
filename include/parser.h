@@ -42,6 +42,7 @@ enum class ASTNodeType {
   If,
   Switch,
   For,
+  Return,
 
   // declarations
   Declaration
@@ -56,6 +57,7 @@ struct Object {
 
 struct Scope {
   Scope* parent_scope;
+  Type const* return_type;
   std::unordered_map<std::string, Object*> variables;
   std::unordered_map<std::string, Object*> typedef_names;
 };

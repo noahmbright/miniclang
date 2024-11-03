@@ -4,16 +4,19 @@
 
 #include <cassert>
 
-Scope* new_scope(Scope* parent_scope)
+Scope* new_scope(Scope* parent_scope, Type const* return_type = nullptr)
 {
   Scope* current_scope = (Scope*)malloc(sizeof(Scope));
+
   current_scope->parent_scope = parent_scope;
+  current_scope->return_type = return_type;
   current_scope->variables = std::unordered_map<std::string, Object*>();
   current_scope->typedef_names = std::unordered_map<std::string, Object*>();
+
   return current_scope;
 }
 
-static ASTNode* parse_compound_statement(Lexer*, Scope*);
+static ASTNode* parse_compound_statement(Lexer*, Scope*, Type const* = nullptr);
 static ASTNode* parse_jump_statement(Lexer*, Scope*);
 static ASTNode* parse_expression_statement(Lexer*, Scope*);
 static ASTNode* parse_iteration_statement(Lexer*, Scope*);
@@ -97,9 +100,9 @@ static ASTNode* parse_labeled_statement(Lexer* lexer, Scope* scope)
 // {}, for use in basically everything, e.g. for loops
 //
 // compound-statement: ( declaration | statement )*
-static ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope)
+static ASTNode* parse_compound_statement(Lexer* lexer, Scope* scope, Type const* return_type)
 {
-  Scope* current_scope = new_scope(scope);
+  Scope* current_scope = new_scope(scope, return_type);
 
   assert(get_current_token(lexer)->type == TokenType::LBrace);
   get_next_token(lexer);
@@ -144,6 +147,9 @@ static ASTNode* parse_expression_statement(Lexer* lexer, Scope* scope)
 // switch ( expression ) statement
 static ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 {
+  if (!scope->return_type)
+    error_token(lexer, "Selection statement not allowed in global scope\n");
+
   Scope* current_scope = new_scope(scope);
 
   switch (get_current_token(lexer)->type) {
@@ -182,7 +188,10 @@ static ASTNode* parse_selection_statement(Lexer* lexer, Scope* scope)
 // iteration statements are (do) while and for
 static ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 {
-  Scope* current_scope = new_scope(scope);
+  if (!scope->return_type)
+    error_token(lexer, "Iteration statement not allowed in global scope\n");
+
+  Scope* current_scope = new_scope(scope, scope->return_type);
   ASTNode* ast_node = new_ast_node(current_scope, ASTNodeType::For);
 
   switch (get_current_token(lexer)->type) {
@@ -257,7 +266,6 @@ static ASTNode* parse_iteration_statement(Lexer* lexer, Scope* scope)
 static ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
 {
   // FIXME: jump statement semantics
-  ASTNode* ast_node = new_ast_node(scope, ASTNodeType::Void);
   switch (get_current_token(lexer)->type) {
     get_next_token(lexer);
 
@@ -268,11 +276,14 @@ static ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
   }
 
   case TokenType::Return: {
-    // FIXME return statements
     get_next_token(lexer);
     if (get_current_token(lexer)->type != TokenType::Semicolon) {
+
+      ASTNode* return_statement_node = new_ast_node(scope, ASTNodeType::Return);
       ASTNode* return_value_node = parse_expression(lexer, scope);
-      ast_node->rhs = return_value_node;
+      return_statement_node->rhs = return_value_node;
+      expect_and_get_next_token(lexer, TokenType::Semicolon, "Expected semicolon after return statement\n");
+      return return_statement_node;
     }
   }
 
@@ -286,7 +297,7 @@ static ASTNode* parse_jump_statement(Lexer* lexer, Scope* scope)
     break;
   }
 
-  return ast_node;
+  assert(false);
 }
 
 // a translation unit is ( function definition | declaration )*
@@ -316,7 +327,7 @@ ExternalDeclaration* parse_translation_unit(char const* file)
     if (!token_is_declaration_specifier(get_current_token(&lexer), &current_scope))
       error_token(&lexer, "Expected declaration specifier\n");
 
-    // parse declaration specifiers and turn to type
+    // parse declaration specifiers and turn to type, either types of variables declared or return type of function defined
     DeclarationSpecifierFlags declaration_specifiers = parse_declaration_specifiers(&lexer, &current_scope);
     Type const* fundamental_type_ptr = declaration_to_fundamental_type(&declaration_specifiers);
 
@@ -331,7 +342,7 @@ ExternalDeclaration* parse_translation_unit(char const* file)
       // if the current object is a function followed by a {, this is a function definition
       if (get_current_token(&lexer)->type == TokenType::LBrace) {
         declaration_type = ExternalDeclarationType::FunctionDefinition;
-        ast_node->object->function_body = parse_compound_statement(&lexer, &current_scope);
+        ast_node->object->function_body = parse_compound_statement(&lexer, &current_scope, fundamental_type_ptr);
         break;
       }
 

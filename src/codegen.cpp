@@ -2,12 +2,24 @@
 #include "type.h"
 
 #include <cassert>
-#include <string>
+
+using IdentifierMap = std::unordered_map<std::string, unsigned>;
 
 static void error_and_stop(char const* message)
 {
   fprintf(stderr, "%s", message);
   exit(1);
+}
+
+static char const* print_numeric_literal_as_string(FILE* outfile, ASTNode const* ast_node)
+{
+  assert(ast_node->type == ASTNodeType::NumericConstant);
+  switch (ast_node->data_type) {
+  case FundamentalType::Int:
+    fprintf(outfile, "%d", ast_node->data_as.int_data);
+  default:
+    assert(false);
+  }
 }
 
 static char const* type_to_string(Type const* type)
@@ -62,10 +74,78 @@ static char const* type_to_string(Type const* type)
   }
 }
 
-void emit_code_from_node(ASTNode const* ast_node, FILE* outfile)
+static void emit_code_from_node(ASTNode const* ast_node, FILE* outfile, IdentifierMap& identifier_map, unsigned* count)
 {
-  (void)ast_node;
-  fprintf(outfile, "asdf\n");
+  switch (ast_node->type) {
+
+  case ASTNodeType::Void:
+    return;
+
+  case ASTNodeType::NumericConstant:
+    print_numeric_literal_as_string(outfile, ast_node);
+    return;
+
+  case ASTNodeType::VariableReference:
+    if (!identifier_map.contains(ast_node->referenced_variable))
+      error_and_stop("Local variable not found in this identifier map\n");
+
+    fprintf(outfile, "%%%d", identifier_map.at(ast_node->referenced_variable));
+    return;
+
+  case ASTNodeType::Declaration: {
+    // a declaration is a series of "int x = 3"s or whatever
+    // this requires us to put these new variables on the stack in accord with their type
+    // then potentially initialize them
+    //
+    // variables are put on the LLVM stack using the alloca instruction
+    // https://www.llvm.org/docs/LangRef.html#alloca-instruction
+    //
+    // alloca returns a pointer to the requested type, then the initialization can be done using loads and stores
+    // https://www.llvm.org/docs/LangRef.html#store-instruction
+    // a store's semantics are, in short, "store <type> <value>, ptr <ptr>"
+    Object* current_object = ast_node->object;
+    assert(current_object && "Emitting code for declaration with null object");
+
+    identifier_map[current_object->identifier] = *count;
+    fprintf(outfile, "  %%%u = alloca %s\n", *count++, type_to_string(current_object->type));
+
+    // node has an initializer
+    if (ast_node->rhs) { }
+  }
+    return;
+
+  case ASTNodeType::Return:
+    // FIXME what register to return?
+    assert(ast_node->scope->return_type && "codegen for return statement with no return type");
+    fprintf(outfile, "  ret %s %%%d\n", type_to_string(ast_node->scope->return_type), 0);
+    return;
+  case ASTNodeType::Multiplication:
+  case ASTNodeType::Division:
+  case ASTNodeType::Modulo:
+  case ASTNodeType::Addition:
+  // https://www.llvm.org/docs/LangRef.html#add-instruction
+  // FIXME: Worry about wrap around
+  case ASTNodeType::Subtraction:
+  case ASTNodeType::BitShiftLeft:
+  case ASTNodeType::BitShiftRight:
+  case ASTNodeType::GreaterThan:
+  case ASTNodeType::GreaterThanOrEqualTo:
+  case ASTNodeType::LessThan:
+  case ASTNodeType::LessThanOrEqualTo:
+  case ASTNodeType::EqualityComparison:
+  case ASTNodeType::InequalityComparison:
+  case ASTNodeType::BitwiseAnd:
+  case ASTNodeType::BitwiseXor:
+  case ASTNodeType::BitwiseOr:
+  case ASTNodeType::LogicalAnd:
+  case ASTNodeType::LogicalOr:
+  case ASTNodeType::ConditionalExpression:
+  case ASTNodeType::Assignment:
+  case ASTNodeType::If:
+  case ASTNodeType::Switch:
+  case ASTNodeType::For:
+    assert(false && "emitting code not implemented");
+  }
 }
 
 // https://llvm.org/docs/LangRef.html#functions
@@ -104,13 +184,23 @@ static void function_definition_signature(Object const* function_object, FILE* o
 
 // this gets appended to the function definition, which ends with {\n
 // in C, the function body is a compound statment, so we just need to emit code corresponding to a compound statement
-static void emit_function_body(ASTNode const* function_body_head_node, FILE* outfile)
+static void emit_function_body(Object const* function_object, FILE* outfile)
 {
+  assert(function_object->function_body);
+  assert(function_object->type->function_data->return_type);
+
   // begin the function definition with the "entry" basic block
   fprintf(outfile, "entry:\n");
 
-  for (ASTNode const* current_node = function_body_head_node; current_node; current_node = current_node->next) {
-    emit_code_from_node(current_node, outfile);
+  IdentifierMap identifier_map;
+  unsigned count = 0;
+  for (FunctionParameter const* current_param = function_object->type->function_data->parameter_list; current_param != nullptr;
+       current_param = current_param->next_parameter)
+    identifier_map[current_param->identifier] = count++;
+  printf("emittinf body\n");
+
+  for (ASTNode const* current_ast_node = function_object->function_body; current_ast_node; current_ast_node = current_ast_node->next) {
+    emit_code_from_node(current_ast_node, outfile, identifier_map, &count);
   }
 }
 
@@ -121,7 +211,7 @@ static void emit_function_definition(ExternalDeclaration const* function_declara
   Object const* function_object = head_node->object;
 
   function_definition_signature(function_object, outfile);
-  emit_function_body(function_object->function_body, outfile);
+  emit_function_body(function_object, outfile);
 
   fprintf(outfile, "}\n");
 }
